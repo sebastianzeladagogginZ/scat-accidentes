@@ -1,0 +1,10 @@
+# Backend: contiene la lista de DNI del personal. Vive solo en Google Apps Script.
+apps-script/
+# Documentación interna de despliegue
+DESPLIEGUE.md
+# Temporales
+*.tmp
+_*.html
+_*.svg
+Thumbs.db
+desktop.ini

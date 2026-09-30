@@ -1,0 +1,9 @@
+{
+  "name": "SCAT · Gestión de Accidentes · Optical Networks",
+  "short_name": "SCAT ON",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b2540",
+  "theme_color": "#0b2540",
+  "icons": [{ "src": "img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
