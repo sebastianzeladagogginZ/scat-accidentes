@@ -43,35 +43,44 @@ a{color:var(--brand2);text-decoration:none} a:hover{text-decoration:underline}
 .lg-brand{position:relative;overflow:hidden;color:#fff;padding:48px;display:flex;flex-direction:column;justify-content:space-between;
   background:radial-gradient(900px 500px at 110% 110%,rgba(242,140,40,.45),transparent 60%),radial-gradient(700px 500px at -10% -10%,rgba(56,189,248,.35),transparent 60%),linear-gradient(150deg,#071b30,#0b2540 45%,#0c3a63)}
 .lg-brand::after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.08) 1px,transparent 1px);background-size:22px 22px;mask:linear-gradient(180deg,transparent,#000 40%,transparent)}
-.lg-brand img{width:min(100%,400px);height:auto;align-self:flex-start;position:relative;z-index:1;filter:drop-shadow(0 10px 30px rgba(0,0,0,.35))}
-.lg-brand h2{font-size:38px;line-height:1.08;letter-spacing:-1px;margin:0 0 14px;max-width:520px;position:relative;z-index:1;font-weight:900}
+.lg-brand{justify-content:center!important}
+.lg-brand-in{position:relative;z-index:1;display:flex;flex-direction:column;gap:18px;max-width:540px;margin:0 auto;width:100%}
+.lg-brand img{width:min(100%,340px);height:auto;margin:0 0 6px -10px;filter:drop-shadow(0 10px 30px rgba(0,0,0,.35))}
+.lg-eyebrow{font-size:11.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#8fb8d8}
+.lg-brand h2{font-size:clamp(28px,3vw,40px);line-height:1.08;letter-spacing:-1px;margin:0;font-weight:900;text-wrap:balance}
 .lg-brand h2 em{font-style:normal;color:var(--on)}
-.lg-brand p{color:#b8d3e8;max-width:470px;margin:0;position:relative;z-index:1}
-.lg-feat{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:26px;position:relative;z-index:1;max-width:520px}
-.lg-feat div{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;font-size:12.5px;color:#dbeafe;backdrop-filter:blur(4px)}
-.lg-feat b{display:block;color:#fff;font-size:13px}
-.lg-foot{font-size:11.5px;color:#7fa8c8;position:relative;z-index:1}
-.lg-form{display:grid;place-items:center;padding:32px 24px}
-.login-card{width:100%;max-width:400px}
-.login-card h1{font-size:26px;margin:0 0 4px;letter-spacing:-.6px}
-.login-card .lead{color:var(--muted);margin:0 0 24px}
-.login-err{color:var(--bad);font-size:13px;font-weight:600;margin-top:12px;min-height:18px;text-align:center}
-.shake{animation:shake .35s} @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
-.lg-perfil{display:flex;gap:12px;align-items:center;padding:12px 14px;border:1.5px solid #bae6fd;background:linear-gradient(180deg,#f0f9ff,#fff);border-radius:14px;animation:fade .25s var(--ease)}
-.lg-perfil .av{width:46px;height:46px;font-size:16px}
-.lg-perfil b{display:block;font-size:15px;line-height:1.2}
+.lg-brand p{color:#b8d3e8;margin:0;font-size:15px;line-height:1.55;max-width:470px}
+.lg-feat{list-style:none;margin:6px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.lg-feat li{display:flex;gap:12px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;font-size:12.5px;color:#cfe0ef}
+.lg-feat li span{width:26px;height:26px;border-radius:8px;background:var(--on);color:#fff;display:grid;place-items:center;font-weight:900;font-size:13px;flex:none}
+.lg-feat b{display:block;color:#fff;font-size:13.5px}
+.lg-foot{position:absolute!important;left:48px;right:48px;bottom:26px;font-size:11px;color:#6f98ba;z-index:1}
+.lg-form{display:grid;place-items:center;padding:32px 24px;background:radial-gradient(circle at 1px 1px,#dfe7f0 1px,transparent 0) 0 0/22px 22px,#f4f7fb}
+.login-card{width:100%;max-width:430px;background:#fff;border:1px solid var(--line);border-radius:24px;padding:36px 34px 28px;box-shadow:0 30px 60px -30px rgba(11,37,64,.35),0 1px 2px rgba(15,23,42,.05)}
+.lg-kicker{font-size:11.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--on);margin-bottom:10px}
+.login-card h1{font-size:28px;margin:0 0 6px;letter-spacing:-.7px}
+.login-card .lead{color:var(--muted);margin:0 0 24px;font-size:14px}
+.lg-label{display:block;font-size:12.5px;font-weight:700;color:var(--ink2);margin-bottom:6px}
+.lg-doc{position:relative;display:flex;align-items:center;margin-bottom:14px}
+.lg-doc svg{position:absolute;left:14px;width:22px;height:22px;color:var(--soft);pointer-events:none}
+.lg-doc input{width:100%;height:58px;padding:0 70px 0 48px;border:1.5px solid var(--line2);border-radius:14px;font-size:22px;font-weight:700;letter-spacing:2px;font-variant-numeric:tabular-nums;color:var(--ink);background:#fff;transition:border-color .15s,box-shadow .15s}
+.lg-doc input::placeholder{font-size:16px;font-weight:500;letter-spacing:0;color:var(--soft)}
+.lg-doc input:focus{outline:none;border-color:var(--brand2);box-shadow:0 0 0 4px rgba(2,132,199,.12)}
+.lg-tipo{position:absolute;right:12px;font-size:11px;font-weight:900;letter-spacing:.6px;background:var(--navy);color:#fff;border-radius:8px;padding:4px 8px}
+.lg-tipo.ce{background:var(--purple)}
+.lg-perfil{display:flex;gap:12px;align-items:center;padding:12px 14px;margin-bottom:14px;border:1.5px solid #bae6fd;background:linear-gradient(180deg,#f0f9ff,#fff);border-radius:14px;animation:fade .25s var(--ease)}
+.lg-perfil .av{width:44px;height:44px;font-size:15px}
+.lg-perfil b{display:block;font-size:14.5px;line-height:1.2}
 .lg-perfil .sub{font-size:12px;color:var(--muted)}
-.lg-perfil .chip-doc{font-size:10.5px;font-weight:800;background:var(--navy);color:#fff;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
-.lg-perfil .ok-t{font-size:11.5px;font-weight:700;color:var(--ok)}
-.lg-perfil button{margin-left:auto;background:none;border:none;color:var(--brand2);font-weight:600;cursor:pointer;font-size:12px;padding:4px}
-.lg-recordar{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:12.5px;color:var(--ink2);cursor:pointer}
-.lg-recordar input{width:16px;height:16px;accent-color:var(--brand2)}
-.lg-rec-list{display:grid;gap:8px;margin-bottom:16px}
+.lg-ayuda{font-size:12.5px;color:var(--muted);text-align:center;margin:18px 0 0}
+.lg-rec-list{display:grid;gap:8px;margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}
 .lg-rec-list:empty{display:none}
-.lg-rec-t{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
-.lg-rec{display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:1.5px solid var(--line2);background:#fff;border-radius:14px;padding:10px 12px;cursor:pointer;transition:.15s}
-.lg-rec:hover{border-color:var(--brand2);box-shadow:var(--sh);transform:translateY(-1px)}
-.lg-rec b{display:block;font-size:13.5px}.lg-rec span{font-size:11.5px;color:var(--muted)}
+.lg-rec-t{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+.lg-rec-t button{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;text-decoration:underline}
+.lg-rec{display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:1.5px solid var(--line);background:var(--bg2);border-radius:14px;padding:9px 12px;cursor:pointer;transition:.15s}
+.lg-rec:hover{border-color:var(--brand2);background:#fff;box-shadow:var(--sh)}
+.lg-rec .av{width:34px;height:34px;font-size:12px}
+.lg-rec b{display:block;font-size:13px}.lg-rec span{font-size:11.5px;color:var(--muted)}
 .lg-rec .go{margin-left:auto;color:var(--brand2);font-size:20px}
 .demo-hint{margin-top:22px;border:1px dashed #bae6fd;background:#f0f9ff;border-radius:14px;padding:12px;font-size:12px;color:#075985}
 .demo-hint .dh-t{font-weight:700;margin-bottom:8px;display:block}
@@ -475,28 +484,39 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
 
 <section id="login" hidden>
   <div class="lg-brand">
-    <img src="img/logo-oscuro.svg" alt="Optical Networks">
-    <div>
+    <div class="lg-brand-in">
+      <img src="img/logo-oscuro.svg" alt="Optical Networks">
+      <div class="lg-eyebrow">Sistema de Gestión de SST · SST-PR-03</div>
       <h2>Gestión de accidentes con <em>metodología SCAT</em></h2>
-      <p>Del reporte al cierre: descansos médicos, investigación causal, plan de acción automático, formatos firmados con selfie e indicadores en tiempo real.</p>
-      <div class="lg-feat"><div><b>Investigación guiada</b>Sugerencias en cadena del cuadro SCAT</div><div><b>Firma electrónica</b>Selfie + firma con el dedo en PDF</div><div><b>Plan automático</b>Una medida por cada causa marcada</div><div><b>Trazabilidad total</b>Quién, qué y cuándo, sin excepción</div></div>
+      <p>Del reporte al cierre en un solo lugar: descansos médicos, investigación causal, plan de acción, formatos firmados e indicadores.</p>
+      <ul class="lg-feat">
+        <li><span>1</span><div><b>Reporta</b>el evento desde el celular en minutos</div></li>
+        <li><span>2</span><div><b>Investiga</b>con el cuadro SCAT guiado paso a paso</div></li>
+        <li><span>3</span><div><b>Actúa</b>con un plan de acción generado por causa</div></li>
+        <li><span>4</span><div><b>Cierra</b>con formatos PDF firmados y trazabilidad</div></li>
+      </ul>
     </div>
-    <div class="lg-foot">Sistema de Gestión de SST · Ley N.° 29783 · SST-PR-03</div>
+    <div class="lg-foot">Optical Networks S.A.C. · Ley N.° 29783 · Datos personales protegidos (Ley N.° 29733)</div>
   </div>
   <div class="lg-form">
     <div class="login-card">
-      <h1>Bienvenido</h1>
-      <p class="lead">Ingresa con tu DNI o CE. En un equipo recordado no necesitas contraseña.</p>
-      <div id="lgRecordados" class="lg-rec-list"></div>
-      <form id="loginForm" autocomplete="on" novalidate>
-        <div class="f mb"><label for="lgDni">DNI / CE</label><input id="lgDni" inputmode="numeric" autocomplete="username" maxlength="12" placeholder="Escribe tu número de documento"></div>
+      <div class="lg-kicker">SCAT · Accidentes e incidentes</div>
+      <h1>Ingresa a tu cuenta</h1>
+      <p class="lead">Escribe tu DNI o carné de extranjería registrado en SSOMA.</p>
+      <form id="loginForm" autocomplete="off" novalidate>
+        <label for="lgDni" class="lg-label">Número de documento</label>
+        <div class="lg-doc">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2.5"/><path d="M13 10h5M13 14h3"/></svg>
+          <input id="lgDni" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="Ej.: 71331077" aria-describedby="lgTipo">
+          <span id="lgTipo" class="lg-tipo" hidden></span>
+        </div>
         <div id="lgPerfil" class="lg-perfil" hidden></div>
-        <div class="f" id="lgClaveBox"><label for="lgClave">Contraseña</label><input id="lgClave" type="password" autocomplete="current-password"></div>
-        <label class="lg-recordar" id="lgRecBox" for="lgRecordar"><input type="checkbox" id="lgRecordar" checked> Recordar este equipo por 30 días <span class="muted">(luego solo pedirá tu DNI)</span></label>
-        <button class="btn primary block lg mt" type="submit" id="lgBtn">Ingresar</button>
+        <button class="btn primary block lg" type="submit" id="lgBtn">Ingresar</button>
         <div class="login-err" id="lgErr" role="alert"></div>
       </form>
-      <div class="demo-hint" id="demoHint" hidden><span class="dh-t">Modo demostración — toca un perfil para entrar (clave demo1234)</span><div id="demoUsers"></div></div>
+      <div id="lgRecordados" class="lg-rec-list"></div>
+      <p class="lg-ayuda">¿No puedes ingresar? Pide que registren tu documento al área <b>SSOMA</b>.</p>
+      <div class="demo-hint" id="demoHint" hidden><span class="dh-t">Modo demostración: toca un perfil para entrar</span><div id="demoUsers"></div></div>
     </div>
   </div>
 </section>

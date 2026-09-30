@@ -6,21 +6,20 @@
 
 ## Resultado
 
-La auditoría encontró **8 riesgos, todos corregidos** y verificados antes de publicar.
+La auditoría encontró **7 riesgos, todos corregidos** y verificados antes de publicar.
 Quedan **3 riesgos aceptados**, cada uno con su mitigación (ver al final).
 
 ## Hallazgos corregidos
 
 | # | Riesgo | Severidad | Corrección aplicada |
 |---|---|---|---|
-| 1 | **La clave inicial es el DNI/CE**, que es fácil de conocer. Alguien que conozca un DNI podría usar la cuenta antes que su dueño. | Alta | El servidor **bloquea todas las acciones** hasta que el usuario cambie su contraseña. La nueva clave **no puede contener el DNI/CE**, debe ser distinta de la actual y tener mínimo 8 caracteres con letras y números. |
+| 1 | **Barridos de números de documento** para encontrar DNI registrados. | Alta | Bloqueo por documento y freno global ante muchos intentos fallidos; todo queda en la auditoría (ver "Ingreso solo con DNI / CE"). |
 | 2 | **Inyección de fórmulas en la hoja**: un texto como `=IMPORTXML(...)` en un campo se habría ejecutado en el Google Sheet y podría filtrar datos. | Alta | Todo texto que empiece con `= + - @` se guarda como texto literal en todas las escrituras a la hoja. |
 | 3 | **Inyección de código por las imágenes de firma**: se aceptaba cualquier texto que empezara como imagen. | Alta | El servidor y la app validan la imagen de forma estricta (solo PNG/JPEG en base64 puro, con tamaño máximo). El documento y el firmante se validan contra una lista cerrada. |
 | 4 | **Adjuntos peligrosos**: un archivo HTML o SVG subido como "evidencia" podía ejecutar código al abrirse. | Alta | Solo se aceptan PDF, JPG, PNG, WEBP, HEIC, Word, Excel y CSV, validados por tipo **y** por extensión. El visor solo muestra PDF e imágenes; todo lo demás se descarga sin interpretarse. |
-| 5 | **Cifrado débil de contraseñas**: una sola ronda de SHA-256. | Media | Se aplican 500 rondas de SHA-256 con sal única por usuario. Las claves antiguas se migran solas al ingresar. |
-| 6 | **Fugas de información técnica**: los errores internos se mostraban al usuario. | Media | El usuario ve un mensaje genérico; el detalle queda solo en los registros de Apps Script. |
-| 7 | **Datos malformados o gigantes** (fechas inválidas, registros de más de 50 000 caracteres). | Media | El servidor valida fechas, horas, tipos de evento y tamaño máximo antes de guardar. |
-| 8 | **Inyección de fórmulas en los CSV exportados** (Excel las ejecuta al abrir). | Baja | Las celdas que empiezan con `= + - @` se exportan como texto. |
+| 5 | **Fugas de información técnica**: los errores internos se mostraban al usuario. | Media | El usuario ve un mensaje genérico; el detalle queda solo en los registros de Apps Script. |
+| 6 | **Datos malformados o gigantes** (fechas inválidas, registros de más de 50 000 caracteres). | Media | El servidor valida fechas, horas, tipos de evento y tamaño máximo antes de guardar. |
+| 7 | **Inyección de fórmulas en los CSV exportados** (Excel las ejecuta al abrir). | Baja | Las celdas que empiezan con `= + - @` se exportan como texto. |
 
 ## Controles que ya existían y se verificaron
 
@@ -33,24 +32,23 @@ Quedan **3 riesgos aceptados**, cada uno con su mitigación (ver al final).
 - **Política de contenido (CSP) en la página:** solo ejecuta scripts propios y de cdnjs, y solo se conecta a Google Apps Script. Además, `no-referrer`.
 - **Salida de datos a pantalla:** todo texto de usuario se escapa antes de mostrarse, para evitar inyección de código (XSS).
 
-## Ingreso con DNI + "Recordar este equipo" (v2.2)
+## Ingreso solo con DNI / CE (v2.3, decisión de SSOMA del 30/09/2026)
 
-- **Primer ingreso en cada equipo:** DNI/CE + contraseña.
-- **Casilla "Recordar este equipo":** marcada por defecto. El servidor entrega un código aleatorio de 64 caracteres que se guarda solo en ese navegador. En la hoja `Dispositivos`, que está protegida, queda únicamente su huella SHA-256.
-- **Durante 30 días:** en ese equipo basta con escribir el DNI. La app reconoce el perfil (nombre, rol y si es DNI o CE) y el servidor valida el código del equipo. Desde un equipo sin código se sigue pidiendo la contraseña.
-- **Revocación automática:** al cambiar la contraseña se revocan los demás equipos; al restablecerla o desactivar al usuario, todos. Desde "Mi cuenta" se puede olvidar el equipo actual o cerrar sesión en todos.
-- **Protecciones que se mantienen:**
-  - El bloqueo por intentos fallidos también cubre el ingreso por equipo.
-  - Un usuario con la clave inicial pendiente no puede usar el ingreso por equipo.
-  - Cada ingreso queda en la auditoría como `login_equipo`, con el identificador del equipo.
-- **Riesgo residual:** quien tenga en sus manos un equipo recordado y desbloqueado puede entrar con ese DNI.
-  *Recomendación:* no marcar "Recordar" en equipos compartidos y usar "Cerrar sesión en todos mis equipos" si se pierde el celular.
+A pedido de SSOMA, el ingreso es **solo con el número de documento registrado** en la hoja `Usuarios`, sin contraseña. Se advirtió que cualquiera que conozca un DNI registrado entra con ese perfil (incluidos los perfiles que ven datos médicos). Las protecciones que se mantienen:
+
+- **Solo entran documentos registrados y activos.** SSOMA controla la lista en "Usuarios y accesos" y puede desactivar a alguien al instante.
+- **Bloqueo por documento:** 8 intentos fallidos bloquean ese DNI/CE durante 15 minutos.
+- **Freno global contra barridos:** 40 documentos no registrados en 10 minutos pausan los ingresos nuevos 10 minutos y quedan en la auditoría (`login_freno_global`).
+- **Trazabilidad:** cada ingreso queda registrado (`login`) con la persona y la hora. Cada acción posterior guarda quién la hizo.
+- **Roles:** siguen aplicándose en el servidor (datos médicos solo para ADMIN, SST y MÉDICO; aprobaciones solo para SSOMA).
+- **Este equipo:** solo guarda nombre y rol de los "accesos recientes", nunca claves. Se pueden olvidar desde la pantalla de ingreso o desde "Mi cuenta".
+
+**Recomendación:** si en el futuro se requiere más protección para los perfiles con datos médicos, se puede volver a exigir una clave solo a ADMIN, SST y MÉDICO, sin cambiar el ingreso del resto.
 
 ## Riesgos aceptados y mitigación
 
 1. **El web app tiene acceso "Cualquier usuario".** Es necesario para que la app de GitHub se conecte. La dirección responde a cualquiera, pero **no entrega datos sin iniciar sesión**; se probó que devuelve `sesion_invalida` y `credenciales`.
-2. **Clave inicial = DNI/CE** (decisión del usuario). Mitigación: cambio obligatorio en el primer ingreso, bloqueo por intentos y alerta en la auditoría.
-   *Recomendación:* que cada persona ingrese y cambie su clave el mismo día en que se le da el acceso.
+2. **Ingreso solo con DNI/CE** (decisión de SSOMA). Mitigación: bloqueos, freno global, auditoría y control de la lista de usuarios.
 3. **La cuenta ssomaoni@gmail.com es la dueña de todos los datos.** Quien controle esa cuenta controla el sistema.
    *Recomendación:* activar la **verificación en 2 pasos** en esa cuenta.
 

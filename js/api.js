@@ -15,7 +15,7 @@ var CONFIG = {
   META_IF: 5, META_IS: 100,  // metas anuales para los medidores del tablero
   SELFIE_PX: 260, FIRMA_W: 420, FIRMA_H: 150
 };
-var APP_VERSION = "V2.2";
+var APP_VERSION = "V2.3";
 
 var API = {
   token: null,
@@ -144,7 +144,7 @@ var MOCK = (function () {
   var H = {
     login: function (b) {
       var dni = String(b.dni || "").replace(/\D/g, ""), x = db.usuarios.filter(function (u) { return u.dni === dni; })[0];
-      if (!x || !x.activo || x.clave !== b.clave) return { ok: false, error: "credenciales", msg: "DNI o contraseña incorrectos." };
+      if (!x || !x.activo) return { ok: false, error: "credenciales", msg: "Ese documento no está registrado o está inactivo. Solicita tu acceso a SSOMA." };   // ingreso solo con DNI / CE
       var t = "demo-" + Math.random().toString(36).slice(2); db.sesiones[t] = dni; x.ultimo_acceso = now();
       audit(pub(x), "login", "sesion", dni, "Inicio de sesión");
       var eq = null;
@@ -327,8 +327,6 @@ var MOCK = (function () {
     if (b.action === "login") return H.login(b);
     if (b.action === "login_equipo" || b.action === "olvidar_equipo") return H[b.action](b);
     var u = sesion(b.token); if (!u) return { ok: false, error: "sesion_invalida" };
-    var ux = db.usuarios.filter(function (v) { return v.dni === u.dni; })[0];
-    if (ux && ux.debe_cambiar && ["cambiar_clave","logout"].indexOf(b.action) < 0) return { ok: false, error: "debe_cambiar", msg: "Primero cambia tu contraseña inicial." };
     var h = H[b.action]; if (!h) return { ok: false, error: "accion_no_reconocida" };
     return h(b, u);
   }
