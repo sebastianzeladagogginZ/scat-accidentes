@@ -82,6 +82,19 @@ function leerForm(root, campos, obj) {
 function optsDivisiones() { return CAT.divisiones.map(function (d) { return { v: d, t: CAT.divDe(d), g: CAT.areaDe(d) }; }); }
 function areaChip(c) { return '<span class="achip"><b>' + esc(CAT.areaDe(c)) + '</b>' + (c.indexOf(CAT.SEP) > 0 ? ' ▸ ' + esc(CAT.divDe(c)) : "") + '</span>'; }
 
+/* ---------- equipos recordados (DNI + recordar este equipo) ---------- */
+function tipoDoc(n) { return /^\d{8}$/.test(String(n)) ? "DNI" : "CE"; }
+var EQUIPO = {
+  KEY: "scat_equipos",
+  _leer: function () { try { return JSON.parse(localStorage.getItem(EQUIPO.KEY) || "{}") || {}; } catch (e) { return {}; } },
+  _escribir: function (m) { try { localStorage.setItem(EQUIPO.KEY, JSON.stringify(m)); } catch (e) {} },
+  de: function (dni) { var e = EQUIPO._leer()[dni]; return e && e.token && e.exp > Date.now() ? e : null; },
+  todos: function () { var m = EQUIPO._leer(); return Object.keys(m).map(function (k) { return Object.assign({ dni: k }, m[k]); }).filter(function (e) { return e.token && e.exp > Date.now(); }); },
+  guardar: function (dni, d) { var m = EQUIPO._leer(); m[dni] = { token: d.token, nombre: d.nombre, rol: d.rol, cargo: d.cargo || "", exp: d.exp }; EQUIPO._escribir(m); },
+  quitar: function (dni) { var m = EQUIPO._leer(); delete m[dni]; EQUIPO._escribir(m); },
+  olvidar: function (dni) { var e = EQUIPO.de(dni); if (e) API.call("olvidar_equipo", { dni: dni, equipo: e.token }); EQUIPO.quitar(dni); }
+};
+
 /* ---------- archivos ---------- */
 function leerArchivo(file) { return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = rej; r.readAsDataURL(file); }); }
 function comprimirImagen(file) {
@@ -285,22 +298,50 @@ var App = {
         '<button type="button" class="demo-reset" onclick="MOCK.reset();location.reload()">↺ Restablecer datos de ejemplo</button>';
     }
     $("#loginForm").onsubmit = function (e) { e.preventDefault(); App.login(); };
+    $("#lgDni").addEventListener("input", function () { App._usarClave = null; App.revisarDni(); });
+    var rec = EQUIPO.todos(); if (rec.length === 1) $("#lgDni").value = rec[0].dni;       // un solo perfil recordado: listo para entrar
     window.addEventListener("hashchange", App.route);
     API.areasPanel().then(function (fuente) { S.fuenteAreas = fuente; });
     var t = null; try { t = sessionStorage.getItem("scat_tk"); } catch (e) {}
     if (t) { API.token = t; App.cargar().then(function (ok) { if (!ok) App.mostrarLogin(); }); } else App.mostrarLogin();
     if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(function () {});
   },
-  mostrarLogin: function () { $("#login").hidden = false; $("#app").hidden = true; setTimeout(function () { $("#lgDni").focus(); }, 50); },
+  mostrarLogin: function () { $("#login").hidden = false; $("#app").hidden = true; App.pintarRecordados(); App.revisarDni(); setTimeout(function () { $("#lgDni").focus(); }, 50); },
+  /* Ingreso: si el DNI corresponde a un perfil recordado en este equipo, basta con el DNI. */
+  revisarDni: function () {
+    var inp = $("#lgDni"); inp.value = inp.value.replace(/\D/g, "").slice(0, 12);
+    var dni = inp.value, e = EQUIPO.de(dni), usarClave = App._usarClave === dni;
+    var rec = !!(e && !usarClave);
+    $("#lgPerfil").hidden = !rec; $("#lgClaveBox").hidden = rec; $("#lgRecBox").hidden = rec;
+    $("#lgBtn").textContent = rec ? "Ingresar →" : "Ingresar";
+    if (rec) $("#lgPerfil").innerHTML = '<div class="av">' + iniciales(e.nombre) + '</div><div style="min-width:0"><b>' + esc(e.nombre) + '</b><div class="sub">' + esc((CAT.roles[e.rol] || {}).t || e.rol) + (e.cargo ? " · " + esc(e.cargo) : "") +
+      '<span class="chip-doc">' + tipoDoc(dni) + '</span></div><div class="ok-t">✓ Equipo recordado hasta ' + fFecha(new Date(e.exp).toISOString()) + '</div></div><button type="button" onclick="App._usarClave=\'' + dni + '\';App.revisarDni();$(\'#lgClave\').focus()">Usar contraseña</button>';
+  },
+  pintarRecordados: function () {
+    var l = EQUIPO.todos();
+    $("#lgRecordados").innerHTML = l.length ? '<div class="lg-rec-t">Continuar en este equipo</div>' + l.map(function (e) {
+      return '<button type="button" class="lg-rec" onclick="$(\'#lgDni\').value=\'' + e.dni + '\';App._usarClave=null;App.revisarDni();App.login()"><div class="av">' + iniciales(e.nombre) + '</div><div><b>' + esc(e.nombre) + '</b><span>' + esc((CAT.roles[e.rol] || {}).t || e.rol) + ' · ' + tipoDoc(e.dni) + ' ' + e.dni.slice(0, 2) + '••••' + e.dni.slice(-2) + '</span></div><span class="go">›</span></button>';
+    }).join("") : "";
+  },
   login: function () {
-    var dni = $("#lgDni").value.trim(), clave = $("#lgClave").value;
-    $("#lgErr").textContent = ""; loading(true, "Verificando…");
-    API.call("login", { dni: dni, clave: clave }).then(function (r) {
+    var dni = $("#lgDni").value.replace(/\D/g, ""), clave = $("#lgClave").value, e = EQUIPO.de(dni), porEquipo = e && App._usarClave !== dni;
+    $("#lgErr").textContent = "";
+    if (!/^\d{8,12}$/.test(dni)) { $("#lgErr").textContent = "Escribe tu DNI (8 dígitos) o CE."; return; }
+    if (!porEquipo && !clave) { $("#lgErr").textContent = "Escribe tu contraseña."; $("#lgClave").focus(); return; }
+    loading(true, "Verificando…");
+    var peticion = porEquipo ? API.call("login_equipo", { dni: dni, equipo: e.token })
+      : API.call("login", { dni: dni, clave: clave, recordar: $("#lgRecordar").checked, ua: navigator.userAgent });
+    peticion.then(function (r) {
       loading(false);
-      if (!r.ok) { $("#lgErr").textContent = r.msg || "No se pudo ingresar."; $(".login-card").classList.add("shake"); setTimeout(function () { $(".login-card").classList.remove("shake"); }, 400); return; }
-      API.token = r.token; try { sessionStorage.setItem("scat_tk", r.token); } catch (e) {}
-      $("#lgClave").value = "";
-      App._dniLogin = String(dni).replace(/\D/g, "");
+      if (!r.ok) {
+        if (r.error === "equipo_invalido") { EQUIPO.quitar(dni); App._usarClave = dni; App.pintarRecordados(); App.revisarDni(); }
+        $("#lgErr").textContent = r.msg || "No se pudo ingresar."; $(".login-card").classList.add("shake"); setTimeout(function () { $(".login-card").classList.remove("shake"); }, 400); return;
+      }
+      API.token = r.token; try { sessionStorage.setItem("scat_tk", r.token); } catch (x) {}
+      $("#lgClave").value = ""; App._usarClave = null;
+      App._dniLogin = dni;
+      if (r.equipo) EQUIPO.guardar(dni, { token: r.equipo, nombre: r.user.nombre, rol: r.user.rol, cargo: r.user.cargo, exp: Date.now() + (r.equipo_dias || 30) * 864e5 });
+      else if (e) EQUIPO.guardar(dni, Object.assign(e, { nombre: r.user.nombre, rol: r.user.rol, cargo: r.user.cargo }));
       if (r.debe_cambiar) { $("#login").hidden = false; App.cambiarClave(true, App.cargar); }      // primero la clave personal
       else App.cargar();
     });
@@ -377,7 +418,8 @@ var App = {
         var o = leerForm(bg, campos); if (!o) return false;
         if (o.nueva !== o.rep) { toast("Las contraseñas no coinciden", "bad"); return false; }
         if (S.user && o.nueva.indexOf(S.user.dni) >= 0 || (App._dniLogin && o.nueva.indexOf(App._dniLogin) >= 0)) { toast("La nueva contraseña no puede contener tu DNI / CE.", "bad"); return false; }
-        return API.call("cambiar_clave", { actual: o.actual, nueva: o.nueva }).then(function (r) {
+        var miEq = EQUIPO.de(App._dniLogin || (S.user && S.user.dni));
+        return API.call("cambiar_clave", { actual: o.actual, nueva: o.nueva, equipo: miEq ? miEq.token : "" }).then(function (r) {
           if (!r.ok) { toast(r.msg || r.error, "bad"); return false; }
           toast("Contraseña actualizada", "ok"); if (alTerminar) setTimeout(alTerminar, 50);
         });
@@ -951,8 +993,25 @@ var USR = {
 Views.cuenta = function () {
   var u = S.user, r = CAT.roles[u.rol] || {};
   App.titulo("Mi cuenta", "");
-  $("#view").innerHTML = '<div class="card" style="max-width:680px"><div class="flex mb"><div class="av lg">' + iniciales(u.nombre) + '</div><div><b style="font-size:17px">' + esc(u.nombre) + '</b><div class="muted">DNI ' + esc(u.dni) + ' · ' + esc(u.cargo || "") + ' · ' + esc(u.correo || "sin correo") + '</div></div></div>' +
+  var eq = EQUIPO.de(u.dni);
+  $("#view").innerHTML = '<div class="card" style="max-width:680px"><div class="flex mb"><div class="av lg">' + iniciales(u.nombre) + '</div><div><b style="font-size:17px">' + esc(u.nombre) + '</b><div class="muted">' + tipoDoc(u.dni) + ' ' + esc(u.dni) + ' · ' + esc(u.cargo || "") + ' · ' + esc(u.correo || "sin correo") + '</div></div></div>' +
     '<div class="plazo"><span>Rol</span><b>' + esc(r.t || u.rol) + '</b></div><div class="plazo"><span>Qué puedes hacer</span><span class="small">' + esc(r.desc || "") + '</span></div>' +
     '<div class="plazo"><span>Alcance</span><span>' + (u.area === "*" ? "Todas las áreas" : String(u.area).split(";").map(areaChip).join(" ")) + '</span></div>' +
-    '<div class="flex mt"><button class="btn primary" onclick="App.cambiarClave()">Cambiar contraseña</button><button class="btn" onclick="App.logout()">Cerrar sesión</button></div></div>';
+    '<div class="flex mt"><button class="btn primary" onclick="App.cambiarClave()">Cambiar contraseña</button><button class="btn" onclick="App.logout()">Cerrar sesión</button></div></div>' +
+    '<div class="card" style="max-width:680px"><h3>Este equipo</h3>' +
+    (eq ? '<div class="callout ok mb"><span>✓</span><div><b>Equipo recordado hasta el ' + fFecha(new Date(eq.exp).toISOString()) + '</b>En este celular o PC entras escribiendo solo tu ' + tipoDoc(u.dni) + '.</div></div>'
+        : '<div class="callout info mb"><span>ℹ️</span><div><b>Este equipo no está recordado</b>La próxima vez que ingreses con contraseña, marca «Recordar este equipo» para entrar solo con tu ' + tipoDoc(u.dni) + '.</div></div>') +
+    '<div class="flex">' + (eq ? '<button class="btn" onclick="EQUIPO.olvidar(S.user.dni);toast(\'Este equipo ya no está recordado\',\'ok\');Views.cuenta()">Olvidar este equipo</button>' : "") +
+    '<button class="btn danger" onclick="CUENTA.revocarTodos()">Cerrar sesión en todos mis equipos</button></div>' +
+    '<p class="small muted mt">Si pierdes tu celular o usaste un equipo compartido, usa «Cerrar sesión en todos mis equipos». Cambiar tu contraseña también invalida los demás equipos recordados.</p></div>';
+};
+var CUENTA = {
+  revocarTodos: function () {
+    confirmar("Cerrar sesión en todos tus equipos", "Todos los equipos recordados (incluido este) volverán a pedir tu contraseña.", "Cerrar en todos").then(function () {
+      API.call("equipos_revocar").then(function (r) {
+        if (!r.ok) return toast(r.msg || r.error, "bad");
+        EQUIPO.quitar(S.user.dni); toast("Listo: tus equipos recordados fueron revocados", "ok"); App.logout();
+      });
+    });
+  }
 };

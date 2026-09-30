@@ -57,6 +57,22 @@ a{color:var(--brand2);text-decoration:none} a:hover{text-decoration:underline}
 .login-card .lead{color:var(--muted);margin:0 0 24px}
 .login-err{color:var(--bad);font-size:13px;font-weight:600;margin-top:12px;min-height:18px;text-align:center}
 .shake{animation:shake .35s} @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.lg-perfil{display:flex;gap:12px;align-items:center;padding:12px 14px;border:1.5px solid #bae6fd;background:linear-gradient(180deg,#f0f9ff,#fff);border-radius:14px;animation:fade .25s var(--ease)}
+.lg-perfil .av{width:46px;height:46px;font-size:16px}
+.lg-perfil b{display:block;font-size:15px;line-height:1.2}
+.lg-perfil .sub{font-size:12px;color:var(--muted)}
+.lg-perfil .chip-doc{font-size:10.5px;font-weight:800;background:var(--navy);color:#fff;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+.lg-perfil .ok-t{font-size:11.5px;font-weight:700;color:var(--ok)}
+.lg-perfil button{margin-left:auto;background:none;border:none;color:var(--brand2);font-weight:600;cursor:pointer;font-size:12px;padding:4px}
+.lg-recordar{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:12.5px;color:var(--ink2);cursor:pointer}
+.lg-recordar input{width:16px;height:16px;accent-color:var(--brand2)}
+.lg-rec-list{display:grid;gap:8px;margin-bottom:16px}
+.lg-rec-list:empty{display:none}
+.lg-rec-t{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.lg-rec{display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:1.5px solid var(--line2);background:#fff;border-radius:14px;padding:10px 12px;cursor:pointer;transition:.15s}
+.lg-rec:hover{border-color:var(--brand2);box-shadow:var(--sh);transform:translateY(-1px)}
+.lg-rec b{display:block;font-size:13.5px}.lg-rec span{font-size:11.5px;color:var(--muted)}
+.lg-rec .go{margin-left:auto;color:var(--brand2);font-size:20px}
 .demo-hint{margin-top:22px;border:1px dashed #bae6fd;background:#f0f9ff;border-radius:14px;padding:12px;font-size:12px;color:#075985}
 .demo-hint .dh-t{font-weight:700;margin-bottom:8px;display:block}
 #demoUsers{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -470,11 +486,14 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
   <div class="lg-form">
     <div class="login-card">
       <h1>Bienvenido</h1>
-      <p class="lead">Ingresa con tu DNI y contraseña.</p>
-      <form id="loginForm" autocomplete="on">
-        <div class="f mb"><label for="lgDni">DNI / CE</label><input id="lgDni" inputmode="numeric" autocomplete="username" required></div>
-        <div class="f"><label for="lgClave">Contraseña</label><input id="lgClave" type="password" autocomplete="current-password" required></div>
-        <button class="btn primary block lg mt" type="submit">Ingresar</button>
+      <p class="lead">Ingresa con tu DNI o CE. En un equipo recordado no necesitas contraseña.</p>
+      <div id="lgRecordados" class="lg-rec-list"></div>
+      <form id="loginForm" autocomplete="on" novalidate>
+        <div class="f mb"><label for="lgDni">DNI / CE</label><input id="lgDni" inputmode="numeric" autocomplete="username" maxlength="12" placeholder="Escribe tu número de documento"></div>
+        <div id="lgPerfil" class="lg-perfil" hidden></div>
+        <div class="f" id="lgClaveBox"><label for="lgClave">Contraseña</label><input id="lgClave" type="password" autocomplete="current-password"></div>
+        <label class="lg-recordar" id="lgRecBox" for="lgRecordar"><input type="checkbox" id="lgRecordar" checked> Recordar este equipo por 30 días <span class="muted">(luego solo pedirá tu DNI)</span></label>
+        <button class="btn primary block lg mt" type="submit" id="lgBtn">Ingresar</button>
         <div class="login-err" id="lgErr" role="alert"></div>
       </form>
       <div class="demo-hint" id="demoHint" hidden><span class="dh-t">Modo demostración — toca un perfil para entrar (clave demo1234)</span><div id="demoUsers"></div></div>

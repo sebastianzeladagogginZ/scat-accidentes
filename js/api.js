@@ -15,7 +15,7 @@ var CONFIG = {
   META_IF: 5, META_IS: 100,  // metas anuales para los medidores del tablero
   SELFIE_PX: 260, FIRMA_W: 420, FIRMA_H: 150
 };
-var APP_VERSION = "V2.1";
+var APP_VERSION = "V2.2";
 
 var API = {
   token: null,
@@ -51,7 +51,8 @@ var API = {
 var MOCK = (function () {
   var KEY = "scat_demo_v2", db;
   function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { console.warn("demo: almacenamiento lleno"); } }
-  function load() { if (db) return; try { db = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) { db = null; } if (!db || !db.usuarios) { db = seed(); save(); } }
+  function load() { if (db) return; try { db = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) { db = null; } if (!db || !db.usuarios) { db = seed(); save(); } db.dispositivos = db.dispositivos || []; }
+  function revocar(dni, excepto) { db.dispositivos.forEach(function (d) { if (d.dni === dni && d.codigo !== excepto) d.activo = false; }); }
   function now() { return new Date().toISOString(); }
   function pad(n, l) { return ("0000" + n).slice(-l); }
   function cp(o) { return JSON.parse(JSON.stringify(o)); }
@@ -145,16 +146,29 @@ var MOCK = (function () {
       var dni = String(b.dni || "").replace(/\D/g, ""), x = db.usuarios.filter(function (u) { return u.dni === dni; })[0];
       if (!x || !x.activo || x.clave !== b.clave) return { ok: false, error: "credenciales", msg: "DNI o contraseña incorrectos." };
       var t = "demo-" + Math.random().toString(36).slice(2); db.sesiones[t] = dni; x.ultimo_acceso = now();
-      audit(pub(x), "login", "sesion", dni, "Inicio de sesión"); save();
-      return { ok: true, token: t, user: pub(x), debe_cambiar: !!x.debe_cambiar };
+      audit(pub(x), "login", "sesion", dni, "Inicio de sesión");
+      var eq = null;
+      if (b.recordar) { eq = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); db.dispositivos.push({ dni: dni, codigo: eq, expira: Date.now() + 30 * 864e5, activo: true }); }
+      save();
+      return { ok: true, token: t, user: pub(x), debe_cambiar: !!x.debe_cambiar, equipo: eq, equipo_dias: 30 };
     },
+    login_equipo: function (b) {
+      var dni = String(b.dni || "").replace(/\D/g, ""), x = db.usuarios.filter(function (u) { return u.dni === dni && u.activo; })[0];
+      var eq = db.dispositivos.filter(function (d) { return d.dni === dni && d.codigo === b.equipo && d.activo && d.expira > Date.now(); })[0];
+      if (!x || !eq || x.debe_cambiar) return { ok: false, error: "equipo_invalido", msg: "Este equipo ya no está recordado. Ingresa con tu contraseña." };
+      var t = "demo-" + Math.random().toString(36).slice(2); db.sesiones[t] = dni; x.ultimo_acceso = now();
+      audit(pub(x), "login_equipo", "sesion", dni, "Ingreso con equipo recordado"); save();
+      return { ok: true, token: t, user: pub(x), debe_cambiar: false };
+    },
+    olvidar_equipo: function (b) { db.dispositivos.forEach(function (d) { if (d.codigo === b.equipo) d.activo = false; }); save(); return { ok: true }; },
+    equipos_revocar: function (b, u) { revocar(u.dni, ""); audit(u, "equipos_revocar", "usuario", u.dni, "Cerró sesión en todos sus equipos recordados"); save(); return { ok: true }; },
     logout: function (b) { delete db.sesiones[b.token]; save(); return { ok: true }; },
     cambiar_clave: function (b, u) {
       var x = db.usuarios.filter(function (v) { return v.dni === u.dni; })[0];
       if (x.clave !== b.actual) return { ok: false, msg: "La contraseña actual no es correcta." };
       if (String(b.nueva).length < 8 || !/[0-9]/.test(b.nueva) || !/[A-Za-z]/.test(b.nueva)) return { ok: false, msg: "Mínimo 8 caracteres con letras y números." };
       if (String(b.nueva).indexOf(u.dni) >= 0) return { ok: false, msg: "La nueva contraseña no puede contener tu DNI / CE." };
-      x.clave = b.nueva; x.debe_cambiar = false; audit(u, "cambiar_clave", "usuario", u.dni, "Cambió su contraseña"); save(); return { ok: true };
+      x.clave = b.nueva; x.debe_cambiar = false; revocar(u.dni, b.equipo); audit(u, "cambiar_clave", "usuario", u.dni, "Cambió su contraseña (otros equipos recordados revocados)"); save(); return { ok: true };
     },
     bootstrap: function (b, u) {
       var ev = db.eventos.filter(function (e) { return alcance(u, e.area, e.reportado_por); }), ids = {};
@@ -303,7 +317,7 @@ var MOCK = (function () {
     usuario_reset: function (b, u) {
       if (u.rol !== "ADMIN") return { ok: false, msg: "Sin permiso" };
       var e = db.usuarios.filter(function (v) { return v.dni === b.dni; })[0]; if (!e) return { ok: false, msg: "No encontrado" };
-      e.clave = e.dni; e.debe_cambiar = true;
+      e.clave = e.dni; e.debe_cambiar = true; revocar(e.dni, "");
       audit(u, "usuario_reset", "usuario", b.dni, "Contraseña restablecida"); save(); return { ok: true, temporal: e.clave };
     }
   };
@@ -311,6 +325,7 @@ var MOCK = (function () {
   function handle(b) {
     load();
     if (b.action === "login") return H.login(b);
+    if (b.action === "login_equipo" || b.action === "olvidar_equipo") return H[b.action](b);
     var u = sesion(b.token); if (!u) return { ok: false, error: "sesion_invalida" };
     var ux = db.usuarios.filter(function (v) { return v.dni === u.dni; })[0];
     if (ux && ux.debe_cambiar && ["cambiar_clave","logout"].indexOf(b.action) < 0) return { ok: false, error: "debe_cambiar", msg: "Primero cambia tu contraseña inicial." };
