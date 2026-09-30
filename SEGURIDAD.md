@@ -33,6 +33,19 @@ Quedan **3 riesgos aceptados**, cada uno con su mitigación (ver al final).
 - **Política de contenido (CSP) en la página:** solo ejecuta scripts propios y de cdnjs, y solo se conecta a Google Apps Script. Además, `no-referrer`.
 - **Salida de datos a pantalla:** todo texto de usuario se escapa antes de mostrarse, para evitar inyección de código (XSS).
 
+## Ingreso con DNI + "Recordar este equipo" (v2.2)
+
+- **Primer ingreso en cada equipo:** DNI/CE + contraseña.
+- **Casilla "Recordar este equipo":** marcada por defecto. El servidor entrega un código aleatorio de 64 caracteres que se guarda solo en ese navegador. En la hoja `Dispositivos`, que está protegida, queda únicamente su huella SHA-256.
+- **Durante 30 días:** en ese equipo basta con escribir el DNI. La app reconoce el perfil (nombre, rol y si es DNI o CE) y el servidor valida el código del equipo. Desde un equipo sin código se sigue pidiendo la contraseña.
+- **Revocación automática:** al cambiar la contraseña se revocan los demás equipos; al restablecerla o desactivar al usuario, todos. Desde "Mi cuenta" se puede olvidar el equipo actual o cerrar sesión en todos.
+- **Protecciones que se mantienen:**
+  - El bloqueo por intentos fallidos también cubre el ingreso por equipo.
+  - Un usuario con la clave inicial pendiente no puede usar el ingreso por equipo.
+  - Cada ingreso queda en la auditoría como `login_equipo`, con el identificador del equipo.
+- **Riesgo residual:** quien tenga en sus manos un equipo recordado y desbloqueado puede entrar con ese DNI.
+  *Recomendación:* no marcar "Recordar" en equipos compartidos y usar "Cerrar sesión en todos mis equipos" si se pierde el celular.
+
 ## Riesgos aceptados y mitigación
 
 1. **El web app tiene acceso "Cualquier usuario".** Es necesario para que la app de GitHub se conecte. La dirección responde a cualquiera, pero **no entrega datos sin iniciar sesión**; se probó que devuelve `sesion_invalida` y `credenciales`.
