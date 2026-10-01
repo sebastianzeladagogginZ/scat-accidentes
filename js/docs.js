@@ -139,7 +139,11 @@ var DOCS = {
       var w = html2pdf().set({ margin: [10, 10, 14, 10], filename: nombre, image: { type: "jpeg", quality: 0.95 },
         html2canvas: { scale: 2, scrollX: 0, scrollY: 0, useCORS: true, backgroundColor: "#ffffff", logging: false },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"], avoid: [".dblk", ".fbt", "tr", ".dp", ".dh", ".avoid"] } }).from(host.firstChild).toPdf();
+        pagebreak: { mode: ["css", "legacy"], avoid: [".dblk", ".fbt", "tr", ".dp", ".dh", ".avoid"] } }).from(host.firstChild).toContainer().then(function () {
+        // html2pdf centra la hoja en la ventana (posición fraccionaria); con barra de desplazamiento la copia
+        // que se captura queda corrida ~5 px y se pierde el borde derecho. Se fija en x = 0 con ancho exacto.
+        var s = this.prop.container.style; s.margin = "0"; s.right = "auto"; s.width = "718px";
+      }).toPdf();
       return w.get("pdf").then(function (pdf) {
         var n = pdf.internal.getNumberOfPages();
         for (var i = 1; i <= n; i++) {
