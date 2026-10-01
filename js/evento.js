@@ -70,7 +70,12 @@ var EV = {
       loading(false);
       if (!r.ok) { toast(r.msg || r.error, "bad"); if (r.error === "conflicto") App.recargar(); else EV.render(ev.id, EV.tab); return null; }
       App.reemplazar("eventos", r.registro); toast(silencioso ? "El evento pasó a «" + a + "» automáticamente" : "Estado: " + a, "ok");
-      App.nav(); EV.ir(a === "Aprobado" ? "formatos" : EV.tab); return r.registro;
+      App.nav(); EV.ir(a === "Aprobado" ? "formatos" : EV.tab);
+      // Automatización: al aprobar, SSOMA firma de inmediato la aprobación del registro de investigación.
+      if (a === "Aprobado" && L.es("ADMIN","SST")) DOCS.cargarFirmas(ev.id, true).then(function () {
+        if (!DOCS.firmaDe(ev.id, "INV", "aprobacion")) setTimeout(function () { toast("Investigación aprobada: firma ahora la aprobación del registro", "ok"); DOCS.firmar("INV", "aprobacion"); }, 600);
+      });
+      return r.registro;
     });
   }
 };

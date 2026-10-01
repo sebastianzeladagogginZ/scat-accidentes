@@ -43,6 +43,26 @@ var DOCS = {
     return d;
   },
 
+  /* Firma de aprobación bloqueada: muestra el siguiente paso y el botón para darlo. */
+  pasoAprobacion: function (ev, doc, slot) {
+    var r = L.rol(), area = L.enMiArea(ev) || L.es("ADMIN","SST"), h = "";
+    if (ev.estado === "En revisión") {
+      h = L.es("ADMIN","SST")
+        ? '<b>La investigación está en revisión.</b> Apruébala para habilitar esta firma.<div class="flex mt"><button class="btn ok sm" onclick="DOCS.aprobarYFirmar(\'' + doc + '\',\'' + slot + '\')">✔ Aprobar y firmar</button></div>'
+        : '<b>Esperando la aprobación de SSOMA.</b> El Supervisor SST o el administrador la aprueba y firma aquí.';
+    } else if (["Reportado","En investigación","Observado"].indexOf(ev.estado) >= 0) {
+      h = '<b>Paso previo: enviar la investigación a revisión.</b> Cuando SSOMA la apruebe, esta firma se habilita y el PDF se archiva solo.' +
+        (L.es("ADMIN","SST","JEFE") && area ? '<div class="flex mt"><button class="btn primary sm" onclick="EV.pedirTransicion(\'En revisión\', false)">📤 Enviar a revisión</button>' +
+          (L.es("ADMIN","SST") ? '<span class="small muted">Luego aparecerá «Aprobar y firmar».</span>' : "") + '</div>' : "");
+    } else h = esc("Disponible cuando la investigación esté aprobada.");
+    return '<div class="callout warn" style="margin:-2px 0 10px;font-size:12.5px"><span>➜</span><div>' + h + '</div></div>';
+  },
+  aprobarYFirmar: function (doc, slot) {
+    var ev = L.evento(EV.id);
+    confirmar("Aprobar investigación y firmar", "Se registrará tu aprobación (nombre, fecha y hora) y se abrirá la firma con selfie para el registro de investigación.", "Aprobar y firmar").then(function () {
+      EV.transicion(ev, "Aprobado", "Aprobado desde «Formatos y firmas»");      // la firma de aprobación se abre sola al aprobar
+    });
+  },
   firmasDe: function (evId) { return DOCS.cache[evId] || []; },
   cargarFirmas: function (evId, forzar) {
     if (DOCS.cache[evId] && !forzar) return Promise.resolve(DOCS.cache[evId]);
@@ -219,7 +239,7 @@ var DOCS = {
             '<div class="fbs">' + d.slots.map(function (s) {
               var f = DOCS.firmaDe(ev.id, d.key, s.k);
               var puede = puedeFirmar && !s.requiere && (!s.solo_roles || s.solo_roles.indexOf(L.rol()) >= 0) && L.rol() !== "REPORTANTE" || (L.rol() === "REPORTANTE" && d.key === "REP" && s.k === "reportante");
-              return FIRMA.bloque(f, s, { hashActual: d.hash, boton: puede ? "DOCS.firmar('" + d.key + "','" + s.k + "')" : "" }) + (s.requiere && !f ? '<div class="small muted" style="margin:-4px 0 8px">' + esc(s.requiere) + '</div>' : "");
+              return FIRMA.bloque(f, s, { hashActual: d.hash, boton: puede ? "DOCS.firmar('" + d.key + "','" + s.k + "')" : "" }) + (s.requiere && !f ? DOCS.pasoAprobacion(ev, d.key, s.k) : "");
             }).join("") + '</div>' +
             '<div class="flex mt"><button class="btn sm" onclick="DOCS.pdf(\'' + d.key + '\',{descargar:true})">⬇ ' + (st.completo ? "Descargar PDF" : "Descargar borrador") + '</button>' +
             (st.pdf ? '<button class="btn sm" onclick="verArchivo(\'eventos\',\'' + ev.id + '\',\'' + st.pdf.id + '\')">📄 PDF archivado</button><span class="small muted">' + fFechaHora(st.pdf.ts) + '</span>' : "") +

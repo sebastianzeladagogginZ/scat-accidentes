@@ -377,9 +377,15 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
 .area-g .opts{margin-top:8px}
 
 /* ===== FORMATOS Y FIRMAS ===== */
-.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:14px}
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(440px,100%),1fr));gap:14px}
 .doc-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--sh)}
 .doc-card.off{opacity:.6}
+.doc-card{container-type:inline-size}
+@container (max-width:520px){
+  .doc-card .fb{grid-template-columns:56px 1fr;gap:10px}
+  .doc-card .fb-ph{width:56px;height:56px}
+  .doc-card .fb-s{grid-column:1/-1;border-left:none;border-top:1px solid #e5eaf0;padding:8px 0 0}
+}
 .doc-top{display:flex;gap:10px;align-items:center}
 .doc-ic{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#fff7ed,#ffedd5);display:grid;place-items:center;font-size:20px;flex:none}
 .fbs{display:grid;gap:8px}
