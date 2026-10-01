@@ -118,6 +118,17 @@ var FIRMA = {
       '<div class="fb-s"><img src="' + img(f.firma) + '" alt="firma"><small>Firma del responsable</small>' + (opts.pdf ? '<small style="font-size:7px;color:#94a3b8">Huella ' + esc(f.hash || "") + '</small>' : "") +
       (opts.boton ? '<button class="btn sm" style="margin-top:4px" onclick="' + opts.boton + '">↺ Volver a firmar</button>' : "") + '</div></div>';
   },
+  /* Bloque de firma para el PDF: tabla de 3 columnas (selfie · datos · firma), estable en cualquier dispositivo. */
+  bloquePdf: function (f, slot) {
+    var img = function (s) { return /^data:image\/(png|jpeg);base64,[A-Za-z0-9+\/]+={0,2}$/.test(String(s || "")) ? s : ""; };
+    if (!f) {
+      return '<table class="fbt pend"><tr><td class="c1"><div class="ph">👤</div></td><td class="c2"><b>' + esc(slot.nombre || "Pendiente de firma") + '</b><span>' + esc(slot.rol) + '</span>' +
+        '<span class="' + (slot.req ? "rq" : "op") + '">' + (slot.req ? "Firma requerida (pendiente)" : "Firma opcional") + '</span></td><td class="c3"><div class="ln"></div><small>Firma del responsable</small></td></tr></table>';
+    }
+    return '<table class="fbt"><tr><td class="c1"><img src="' + img(f.selfie) + '" alt=""></td>' +
+      '<td class="c2"><b>' + esc(f.nombre) + '</b><span>Cargo: ' + esc(f.cargo || slot.rol) + '</span><span>Documento: ' + esc(f.dni || "—") + '</span><span>Fecha y hora: ' + FIRMA.fechaHora(f.ts) + '</span><span class="rl">' + esc(slot.rol) + '</span></td>' +
+      '<td class="c3"><img src="' + img(f.firma) + '" alt=""><small>Firma del responsable</small><small class="hu">Huella ' + esc(f.hash || "") + '</small></td></tr></table>';
+  },
   fechaHora: function (iso) {
     var d = new Date(iso); if (isNaN(d)) return iso || "";
     var p = function (n) { return ("0" + n).slice(-2); };

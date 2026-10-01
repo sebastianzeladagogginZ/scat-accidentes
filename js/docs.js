@@ -108,6 +108,21 @@ var DOCS = {
       s.onload = res; s.onerror = function () { rej(new Error("No se pudo cargar el generador de PDF (revisa tu conexión).")); }; document.head.appendChild(s);
     });
   },
+  /* Agrupa cada título de sección con su contenido para que no quede un título solo al pie de una página. */
+  agrupar: function (doc) {
+    var hijos = Array.prototype.slice.call(doc.children), bloque = null;
+    hijos.forEach(function (el) {
+      if (el.classList.contains("dsec")) { bloque = document.createElement("div"); bloque.className = "dblk"; doc.insertBefore(bloque, el); bloque.appendChild(el); }
+      else if (bloque && !el.classList.contains("dfoot") && !el.classList.contains("wm")) bloque.appendChild(el);
+      else bloque = null;
+    });
+    // Firmas: el título va pegado a la primera firma, y las demás pueden pasar a la página siguiente.
+    Array.prototype.slice.call(doc.querySelectorAll(".dblk")).forEach(function (b) {
+      var fbs = b.querySelector(".fbs"), sec = b.querySelector(".dsec"); if (!fbs || !fbs.firstElementChild) return;
+      b.className = "dblk-f"; var cab = document.createElement("div"); cab.className = "avoid";
+      b.insertBefore(cab, sec); cab.appendChild(sec); var uno = fbs.firstElementChild; uno.style.marginTop = "6px"; cab.appendChild(uno);
+    });
+  },
   pdf: function (docKey, o) {
     o = o || { descargar: true };
     var ev = L.evento(EV.id), d = DOCS.lista(ev).filter(function (x) { return x.key === docKey; })[0], st = DOCS.estado(ev, d);
@@ -116,10 +131,13 @@ var DOCS = {
       var host = document.createElement("div"); host.className = "pdf-host";
       host.innerHTML = DOCS.pagina(ev, d, st);
       document.body.appendChild(host);
+      DOCS.agrupar(host.firstChild);
       var nombre = d.codigo.replace(/[^\w-]+/g, "_") + "_" + ev.id + "_" + d.corto.replace(/[^\wÁÉÍÓÚáéíóúñÑ-]+/g, "_") + (st.completo ? "" : "_BORRADOR") + ".pdf";
-      var w = html2pdf().set({ margin: [8, 8, 12, 8], filename: nombre, image: { type: "jpeg", quality: 0.94 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"], avoid: [".fb", "tr", ".avoid"] } }).from(host.firstChild).toPdf();
+      // A4 con márgenes de 10 mm: área útil 190 mm = 718 px (el .doc mide exactamente eso, sin recortes)
+      var w = html2pdf().set({ margin: [10, 10, 14, 10], filename: nombre, image: { type: "jpeg", quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["css", "legacy"], avoid: [".dblk", ".fbt", "tr", ".dp", ".dh", ".avoid"] } }).from(host.firstChild).toPdf();
       return w.get("pdf").then(function (pdf) {
         var n = pdf.internal.getNumberOfPages();
         for (var i = 1; i <= n; i++) {
@@ -151,7 +169,7 @@ var DOCS = {
 
   /* ---- Página A4 común ---- */
   pagina: function (ev, d, st) {
-    var firmas = d.slots.map(function (s) { var f = DOCS.firmaDe(ev.id, d.key, s.k); return (f || s.req) ? FIRMA.bloque(f, s, { pdf: true }) : ""; }).join("");
+    var firmas = d.slots.map(function (s) { var f = DOCS.firmaDe(ev.id, d.key, s.k); return (f || s.req) ? FIRMA.bloquePdf(f, s) : ""; }).join("");
     return '<div class="doc">' + (st.completo ? "" : '<div class="wm">BORRADOR · FIRMAS PENDIENTES</div>') +
       '<table class="dh"><tr><td class="dl" rowspan="3">' + (DOCS.logoURL ? '<img src="' + DOCS.logoURL + '">' : "<b>ON</b>") + '</td><td class="dt" rowspan="3"><div class="de">' + esc(CONFIG.EMPRESA) + '</div><div class="ds">SISTEMA DE GESTIÓN DE SEGURIDAD Y SALUD EN EL TRABAJO</div><div class="dn">' + esc(d.titulo.toUpperCase()) + '</div></td>' +
       '<td class="dm">Código: <b>' + esc(d.codigo) + '</b></td></tr><tr><td class="dm">Expediente: <b>' + esc(ev.id) + '</b></td></tr><tr><td class="dm">Emitido: <b>' + FIRMA.fechaHora(new Date().toISOString()) + '</b></td></tr></table>' +
@@ -212,7 +230,8 @@ var DOCS = {
       '<div class="dsec">6. ACCIONES CORRECTIVAS Y PREVENTIVAS</div>' + DOCS.tablaAcciones(acc);
   },
   tablaAcciones: function (acc) {
-    return '<table class="dtb"><tr><th>Código</th><th>Acción</th><th>Tipo</th><th>Causa</th><th>Responsable</th><th>Plazo</th><th>Estado</th></tr>' +
+    return '<table class="dtb lista"><colgroup><col style="width:62px"><col><col style="width:68px"><col style="width:46px"><col style="width:120px"><col style="width:66px"><col style="width:66px"></colgroup>' +
+      '<tr><th>Código</th><th>Acción</th><th>Tipo</th><th>Causa</th><th>Responsable</th><th>Plazo</th><th>Estado</th></tr>' +
       (acc.length ? acc.map(function (a) { return "<tr><td>" + esc(a.id) + "</td><td>" + esc(a.descripcion) + "</td><td>" + esc(a.tipo) + "</td><td>" + esc(a.causa || "") + "</td><td>" + esc(a.responsable || "") + "</td><td>" + fFecha(a.fecha_compromiso) + "</td><td>" + esc(L.accVencida(a) ? "Vencida" : a.estado) + "</td></tr>"; }).join("") : "<tr><td colspan='7'>—</td></tr>") + "</table>";
   },
   htmlPlan: function (ev) {
@@ -243,7 +262,8 @@ var DOCS = {
             }).join("") + '</div>' +
             '<div class="flex mt"><button class="btn sm" onclick="DOCS.pdf(\'' + d.key + '\',{descargar:true})">⬇ ' + (st.completo ? "Descargar PDF" : "Descargar borrador") + '</button>' +
             (st.pdf ? '<button class="btn sm" onclick="verArchivo(\'eventos\',\'' + ev.id + '\',\'' + st.pdf.id + '\')">📄 PDF archivado</button><span class="small muted">' + fFechaHora(st.pdf.ts) + '</span>' : "") +
-            (st.completo && (!st.pdf || st.alterado) ? '<button class="btn sm primary" onclick="DOCS.pdf(\'' + d.key + '\',{archivar:true})">Archivar versión firmada</button>' : "") + '</div>'
+            (st.completo && (!st.pdf || st.alterado) ? '<button class="btn sm primary" onclick="DOCS.pdf(\'' + d.key + '\',{archivar:true})">Archivar versión firmada</button>' : "") +
+            (st.completo && st.pdf && !st.alterado ? '<button class="btn sm" title="Vuelve a generar el PDF archivado con el formato actual (no requiere firmar de nuevo)" onclick="DOCS.pdf(\'' + d.key + '\',{archivar:true})">↻ Regenerar PDF</button>' : "") + '</div>'
             : '<p class="small muted">' + esc(d.motivo) + '</p>') + '</div>';
       }).join("") + '</div>';
       $("#tabBody").innerHTML = h;

@@ -416,8 +416,11 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
 .visor{width:100%;height:72vh;border:1px solid var(--line);border-radius:12px;background:#525659}
 .visor-img{max-width:100%;border-radius:12px;display:block;margin:auto}
 /* ===== PDF (A4) ===== */
-.pdf-host{position:fixed;left:-12000px;top:0;width:794px;background:#fff;z-index:-1}
-.doc{width:794px;padding:0 6px;font-family:Arial,Helvetica,sans-serif;color:#111;font-size:10.5px;position:relative;background:#fff}
+.pdf-host{position:fixed;left:-12000px;top:0;width:718px;background:#fff;z-index:-1}
+.doc{width:718px;box-sizing:border-box;padding:0;font-family:Arial,Helvetica,sans-serif;color:#111;font-size:10.5px;line-height:1.35;position:relative;background:#fff}
+.doc *{box-sizing:border-box}
+.doc .dblk{margin-bottom:2px}
+.doc table{table-layout:fixed;word-wrap:break-word;overflow-wrap:anywhere}
 .doc .wm{position:absolute;top:340px;left:40px;right:40px;text-align:center;font-size:46px;font-weight:900;color:rgba(220,38,38,.1);transform:rotate(-24deg);pointer-events:none}
 .dh{width:100%;border-collapse:collapse;margin-bottom:8px}
 .dh td{border:1px solid #333;padding:5px 7px;vertical-align:middle}
@@ -429,14 +432,29 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
 .dtb th,.dtb td{border:1px solid #9aa5b1;padding:4px 6px;vertical-align:top;text-align:left;font-size:10px}
 .dtb th{background:#e8eef5;font-weight:700;width:130px}
 .dtb.sc th{width:auto;text-align:center}
+.dtb.lista th{width:auto;text-align:center;font-size:9.5px}
+.dtb.lista td{font-size:9.5px}
 .sc-i{margin:2px 0} .sc-i b{color:#c2410c}
 .psc-t{font-weight:900;background:#0b2540;color:#fff;border-radius:3px;padding:0 4px;font-size:9px}
 .dp{border:1px solid #9aa5b1;padding:6px 8px;margin:0;white-space:pre-wrap;font-size:10.5px}
-.doc .fbs{margin-top:6px}
-.doc .fb{grid-template-columns:70px 1fr 180px;padding:8px 10px;border-color:#cfd8e3}
-.doc .fb-ph{width:70px;height:70px}
-.doc .fb-d{font-size:11px} .doc .fb-d b{font-size:12.5px}
-.doc .fb.pend .fb-ph{font-size:24px}
+.doc .fbs{margin-top:6px;display:block}
+/* Bloque de firma del PDF (tabla fija: igual en celular y PC) */
+.doc .fbt{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;border:1px solid #cfd8e3;border-radius:8px;margin:0 0 6px;background:#fff}
+.doc .fbt.pend{border-style:dashed;background:#f8fafc}
+.doc .fbt td{border:none;padding:8px 10px;vertical-align:middle;font-size:10.5px}
+.doc .fbt .c1{width:96px;padding-right:0}
+.doc .fbt .c1 img{width:82px;height:82px;border-radius:6px;display:block}
+.doc .fbt .ph{width:82px;height:82px;border-radius:6px;background:#e2e8f0;text-align:center;line-height:82px;font-size:28px;color:#94a3b8}
+.doc .fbt .c2 b{display:block;font-size:12.5px;color:#0f172a;margin-bottom:2px}
+.doc .fbt .c2 span{display:block;color:#1f2937;line-height:1.45}
+.doc .fbt .c2 .rl{color:#64748b;font-size:9.5px;margin-top:2px}
+.doc .fbt .c2 .rq{color:#b45309;font-weight:700}
+.doc .fbt .c2 .op{color:#64748b}
+.doc .fbt .c3{width:210px;border-left:1px solid #e5eaf0;text-align:center}
+.doc .fbt .c3 img{max-width:180px;max-height:62px;display:block;margin:0 auto 2px}
+.doc .fbt .c3 small{display:block;color:#94a3b8;font-size:9px}
+.doc .fbt .c3 .hu{font-size:7px;color:#b6c0cc}
+.doc .fbt .ln{width:160px;height:44px;margin:0 auto 2px;border-bottom:1.5px solid #cbd5e1}
 .dfoot{font-size:8.5px;color:#666;margin-top:8px}
 
 /* ===== MODAL / TOAST / LOADING ===== */
