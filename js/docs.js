@@ -128,6 +128,8 @@ var DOCS = {
     var ev = L.evento(EV.id), d = DOCS.lista(ev).filter(function (x) { return x.key === docKey; })[0], st = DOCS.estado(ev, d);
     loading(true, "Generando PDF…");
     return Promise.all([DOCS.lib(), DOCS.cargarFirmas(ev.id), DOCS.logo()]).then(function () {
+      // El capturador desplaza el contenido según el scroll de la ventana: se captura siempre desde el origen.
+      var sx = window.scrollX, sy = window.scrollY; window.scrollTo(0, 0);
       var host = document.createElement("div"); host.className = "pdf-host";
       host.innerHTML = DOCS.pagina(ev, d, st);
       document.body.appendChild(host);
@@ -135,7 +137,7 @@ var DOCS = {
       var nombre = d.codigo.replace(/[^\w-]+/g, "_") + "_" + ev.id + "_" + d.corto.replace(/[^\wÁÉÍÓÚáéíóúñÑ-]+/g, "_") + (st.completo ? "" : "_BORRADOR") + ".pdf";
       // A4 con márgenes de 10 mm: área útil 190 mm = 718 px (el .doc mide exactamente eso, sin recortes)
       var w = html2pdf().set({ margin: [10, 10, 14, 10], filename: nombre, image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false },
+        html2canvas: { scale: 2, scrollX: 0, scrollY: 0, useCORS: true, backgroundColor: "#ffffff", logging: false },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         pagebreak: { mode: ["css", "legacy"], avoid: [".dblk", ".fbt", "tr", ".dp", ".dh", ".avoid"] } }).from(host.firstChild).toPdf();
       return w.get("pdf").then(function (pdf) {
@@ -144,7 +146,7 @@ var DOCS = {
           pdf.setPage(i); pdf.setFontSize(7); pdf.setTextColor(120);
           pdf.text("Los documentos impresos no son controlados · " + ev.id + " · " + d.codigo + " · huella " + d.hash + " · Página " + i + " de " + n, 105, 291, { align: "center" });
         }
-        var blob = pdf.output("blob"); host.remove();
+        var blob = pdf.output("blob"); host.remove(); window.scrollTo(sx, sy);
         var tareas = [];
         if (o.descargar) visor(blob, nombre);
         if (o.archivar && st.completo) {
