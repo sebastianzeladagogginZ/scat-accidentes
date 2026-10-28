@@ -58,6 +58,14 @@ Se revisó el código nuevo de navegación (`js/guia.js`) con estas comprobacion
 - **Avisos de tareas nuevas (v3.2):** la app vuelve a pedir sus propios datos al servidor cada 5 minutos, con la misma sesión y los mismos permisos; no pausa ni interrumpe pantallas de edición. El sonido se genera en el propio navegador (sin archivos externos) y la vibración solo funciona en celulares que la permiten. Se pueden apagar en «Mi cuenta».
 - **Modo oscuro y presentación (v3.2):** solo cambian colores y tamaños en pantalla. Se comprobó que el PDF generado es idéntico píxel a píxel en modo claro y oscuro.
 
+## Histórico de SSOMA y seguimiento médico (v3.4 · servidor 2.4)
+
+- **Ningún dato del histórico está en el código público.** La importación lee el Excel en el navegador del administrador y lo envía directo a la base privada (Google Sheets). En GitHub solo hay categorías genéricas (procesos, diagnósticos frecuentes), sin datos de personas.
+- **Solo el administrador importa**, y el servidor verifica el rol. Cada fila entra como expediente **cerrado**, sin generar tareas ni correos. Las filas repetidas se omiten mediante una huella de fecha y trabajador.
+- **Datos clínicos reservados:** el diagnóstico, el órgano afectado, la gravedad clínica, la terapia física y el seguimiento solo los reciben ADMIN, SST y MÉDICO. El resto ve "🔒 reservado". La situación laboral, el seguro y la próxima evaluación sí son visibles, porque el jefe necesita conocer las restricciones del trabajador.
+- **Salvaguardas mientras el servidor no esté en 2.4:** la app no muestra los campos clínicos nuevos y bloquea la importación. Así nunca quedan expuestos ni se importa sin protección.
+- **Biblioteca nueva:** el lector de Excel (SheetJS 0.18.5) se carga desde cdnjs solo al importar, dentro de la política de contenido (CSP) existente.
+
 ## Riesgos aceptados y mitigación
 
 1. **El web app tiene acceso "Cualquier usuario".** Es necesario para que la app de GitHub se conecte. La dirección responde a cualquiera, pero **no entrega datos sin iniciar sesión**; se probó que devuelve `sesion_invalida` y `credenciales`.

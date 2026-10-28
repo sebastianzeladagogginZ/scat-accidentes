@@ -15,7 +15,7 @@ var CONFIG = {
   META_IF: 5, META_IS: 100,  // metas anuales para los medidores del tablero
   SELFIE_PX: 260, FIRMA_W: 420, FIRMA_H: 150
 };
-var APP_VERSION = "V3.3";
+var APP_VERSION = "V3.4";
 // Solo en el equipo de desarrollo (localhost): ?demo usa los datos de ejemplo y nunca toca la base real.
 if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && /[?&]demo/.test(location.search)) CONFIG.ENDPOINT_URL = "";
 
@@ -63,7 +63,7 @@ var MOCK = (function () {
   function veTodo(u) { return ["ADMIN","SST","MEDICO","COMITE"].indexOf(u.rol) >= 0 || scope(u).indexOf("*") >= 0; }
   function cubre(u, div) { var s = scope(u); return s.indexOf("*") >= 0 || s.indexOf(div) >= 0 || s.indexOf(CAT.areaDe(div)) >= 0; }
   function alcance(u, div, rep) { if (veTodo(u)) return true; if (u.rol === "REPORTANTE") return rep === u.dni; return cubre(u, div) || rep === u.dni; }
-  var MED = ["ADMIN","SST","MEDICO"], CAMPOS_MED = ["diagnostico","cie10","medico","cmp","observacion_medica"];
+  var MED = ["ADMIN","SST","MEDICO"], CAMPOS_MED = ["diagnostico","cie10","medico","cmp","observacion_medica","terapia","seguimiento","gravedad_clinica","organo"];
   function filtrarMed(u, d) {
     d = cp(d); if (MED.indexOf(u.rol) >= 0) return d;
     CAMPOS_MED.forEach(function (k) { if (d[k]) d[k] = "🔒 reservado"; });
@@ -196,11 +196,14 @@ var MOCK = (function () {
           db.eventos.forEach(function (e) { if (e.id.indexOf(pre) === 0) mx = Math.max(mx, +e.id.slice(pre.length)); });
           d.id = pre + pad(mx + 1, 3); d.estado = "Reportado"; d.reportado_por = u.dni; d.reportado_nombre = u.nombre;
           d.flujo = [{ ts: now(), de: "", a: "Reportado", por: u.nombre, dni: u.dni, rol: u.rol, comentario: "Evento reportado" }]; d.comentarios = [];
+          if (d.historico && u.rol === "ADMIN") { d.estado = "Cerrado"; d.cerrado_ts = now(); d.flujo = [{ ts: now(), de: "", a: "Cerrado", por: u.nombre, dni: u.dni, rol: u.rol, comentario: "Importado del histórico de SSOMA" + (d.fuente ? " (" + d.fuente + ")" : "") }]; }
+          else delete d.historico;
         } else if (ent === "acciones" || ent === "descansos") {
           var pf = ent === "acciones" ? "AC-" : "DM-", m2 = 0;
           db[ent].forEach(function (e) { if (e.id.indexOf(pf) === 0) m2 = Math.max(m2, +e.id.slice(3)); });
           d.id = pf + pad(m2 + 1, 4);
           if (ent === "descansos" && MED.indexOf(u.rol) < 0) d.estado = "Pendiente";
+          if (!(d.historico && u.rol === "ADMIN")) delete d.historico;
         } else d.id = d.anio + "-" + pad(d.mes, 2);
       }
       if (ent === "descansos") { d.dias = dias(d.inicio, d.fin); if (antes && d.estado !== antes.estado && d.estado !== "Pendiente") { d.validado_por = u.nombre; d.validado_ts = now(); } }

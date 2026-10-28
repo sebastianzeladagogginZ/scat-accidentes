@@ -50,7 +50,7 @@ var TAB = {
     var hhtMeses = I.filas.filter(function (f) { return f.hht > 0; }).length;
     return { anio: anio, I: I, T: T, base: base, evA: evA, evPrev: evPrev, abiertas: abiertas, accs: accs, accAb: accAb, venc: venc, cumpl: cumpl, enDM: enDM, incap: incap,
       diasSin: incap ? -diasHasta(incap.fecha) : null, mes: mes, cb: cb, nac: nac, nacPsc: nacPsc, div: div, cont: cont, conScat: conScat, hhtMeses: hhtMeses, al: L.alertas(),
-      mias: S.acciones.filter(function (a) { return a.responsable_dni === S.user.dni && a.estado !== "Cerrada"; }) };
+      mias: S.acciones.filter(function (a) { return a.responsable_dni === S.user.dni && a.estado !== "Cerrada"; }), pat: HIST.patrones(base, anio) };
   },
 
   /* ---------- bloques ---------- */
@@ -90,8 +90,16 @@ var TAB = {
     if (D.nac.length) { var p = D.nacPsc[D.nac[0].c] || {}, m = ["P","S","C"].sort(function (a, b) { return (p[b] || 0) - (p[a] || 0); })[0];
       L2.push(["alertas", "Control que más falla", "<b>" + esc(CAT.txt("nac", D.nac[0].c)) + "</b>, sobre todo por " + ({ P: "programa inadecuado", S: "estándar inadecuado", C: "incumplimiento del estándar" }[m]) + "."]); }
     L2.push(["acciones", "Plan de acción", D.accs.length ? "<b>" + D.cumpl + "% a tiempo</b> · " + D.accAb.length + " abiertas" + (D.venc.length ? ", <b class=\"t-bad\">" + D.venc.length + " vencida" + (D.venc.length > 1 ? "s" : "") + "</b>" : ", ninguna vencida") + "." : "Todavía no hay acciones registradas."]);
+    var P = D.pat;
+    if (P.anom) L2.unshift(["alertas", "Mes fuera de lo normal", "<b class=\"t-bad\">" + MESES[P.anom.i] + " " + D.anio + ": " + P.anom.n + " eventos</b>, " + (P.anom.p ? fmt(P.anom.n / P.anom.p, 1) + " veces el promedio histórico de ese mes (" + fmt(P.anom.p, 1) + ")" : "sin antecedentes ese mes") + ". Revisa qué cambió: carga de trabajo, personal nuevo o contratistas."]);
+    if (P.franja && P.franja.tot >= 5 && P.franja.n / P.franja.tot >= 0.35) L2.push(["reloj", "Hora de mayor riesgo", "<b>" + Math.round(P.franja.n / P.franja.tot * 100) + "% de los eventos ocurre entre las " + P.franja.f.replace("–", " y las ") + " h</b>. Refuerza la supervisión de campo y las pausas activas en esa franja."]);
+    if (P.proc.length && P.proc[0].n >= 3) L2.push(["eventos", "Proceso más expuesto", "<b>" + esc(P.proc[0].c) + "</b> concentra " + P.proc[0].n + " eventos (" + Math.round(P.proc[0].n / P.proc.reduce(function (s, x) { return s + x.n; }, 0) * 100) + "% de los que tienen proceso registrado)."]);
+    if (P.acc >= 5 && P.adm / P.acc >= 0.5) L2.push(["acciones", "Calidad de las medidas", "<b>" + Math.round(P.adm / P.acc * 100) + "% de las medidas son solo administrativas</b> (capacitar, charlas, difundir). Prioriza controles de ingeniería, sustitución y EPP según la jerarquía de controles."]);
     if (!D.hhtMeses) L2.push(["reloj", "Dato pendiente", "Faltan las <b>HHT</b> para calcular los índices de frecuencia y severidad."]);
-    return '<div class="lect">' + L2.slice(0, 4).map(function (x) { return '<div class="lc"><span class="lc-ic">' + svg(x[0]) + '</span><div><small>' + esc(x[1]) + '</small><p>' + x[2] + '</p></div></div>'; }).join("") + '</div>';
+    // Orden por utilidad para gerencia: lo atípico y lo accionable primero.
+    var PRI = ["Mes fuera de lo normal","Tendencia","Calidad de las medidas","Hora de mayor riesgo","Causa básica más repetida","Proceso más expuesto","Control que más falla","Plan de acción","Dato pendiente","Causas básicas"];
+    L2.sort(function (x, y) { return PRI.indexOf(x[1]) - PRI.indexOf(y[1]); });
+    return '<div class="lect">' + L2.slice(0, 6).map(function (x) { return '<div class="lc"><span class="lc-ic">' + svg(x[0]) + '</span><div><small>' + esc(x[1]) + '</small><p>' + x[2] + '</p></div></div>'; }).join("") + '</div>';
   },
   mesCard: function (D) {
     var n = D.evA.length, pico = TAB.pico(D);
@@ -120,6 +128,15 @@ var TAB = {
   contCard: function (D) {
     return '<div class="card"><h3>Tipo de contacto <small>energía o evento que causó el daño</small></h3>' + TAB.rank(D.cont.map(function (x) { return { code: x.c, t: CAT.txt("contactos", x.c), n: x.n }; }), { cls: "b4", vacio: "Aún no hay tipos de contacto registrados" }) + '</div>';
   },
+  compCard: function (D) {
+    var P = D.pat, rango = P.anios.length ? (P.anios.length > 1 ? P.anios[0] + "–" + P.anios[P.anios.length - 1] : P.anios[0]) : "";
+    if (!P.anios.length) return '<div class="card"><h3>Comparación con el histórico</h3>' + vacioHTML("tablero", "Aún no hay años anteriores en el sistema", "Importa el resumen histórico de SSOMA para comparar cada mes con su promedio y detectar meses fuera de lo normal.", L.rol() === "ADMIN" && !PRES.activo ? '<button class="btn primary mt" onclick="HIST.abrir()">⬆ Importar histórico</button>' : "").replace('class="card vacio"', 'class="vacio"') + '</div>';
+    return '<div class="card"><h3>Comparación con el histórico <small>' + D.anio + ' frente al promedio ' + rango + '</small><span class="spacer"></span>' + (P.anom ? '<span class="h-dato bad">⚠ ' + MESES[P.anom.i] + ' fuera de lo normal</span>' : '<span class="h-dato">sin meses atípicos</span>') + '</h3>' +
+      '<div class="chart-box' + (PRES.activo ? " xl" : "") + '"><canvas id="chHist" role="img" aria-label="Eventos por mes frente al promedio histórico"></canvas></div></div>';
+  },
+  procCard: function (D) {
+    return '<div class="card"><h3>Procesos con más eventos <small>toda la base</small></h3>' + TAB.rank(D.pat.proc.map(function (x) { return { t: x.c, n: x.n }; }), { cls: "b3", vacio: "Registra el «Proceso / actividad» al reportar para ver este ranking" }) + '</div>';
+  },
   matriz: function (D) { return '<div class="card"><h3>Matriz de riesgo potencial <small>SCAT bloque 1</small></h3>' + UI.matriz(D.evA) + '</div>'; },
   heat: function (D) { return '<div class="card"><h3>¿Cuándo ocurren? <small>día × franja horaria</small></h3>' + UI.heat(D.evA) + '</div>'; },
   flujo: function (D) {
@@ -147,10 +164,21 @@ var TAB = {
         scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, suggestedMax: Math.max.apply(null, D.mes.map(function (m) { return m.length; })) + 1, ticks: { precision: 0 }, grid: { color: osc ? "rgba(148,163,184,.12)" : "#eef2f7" }, border: { display: false } } } } });
   },
 
+  grafHist: function (D) {
+    if (!window.Chart || !document.getElementById("chHist")) return;
+    var osc = TAB.osc(), P = D.pat;
+    chart("chHist", { type: "bar", data: { labels: MESES, datasets: [
+        { label: "Año " + D.anio, data: P.act, backgroundColor: osc ? "#3987e5" : "#2a78d6", borderRadius: 4, maxBarThickness: 22 },
+        { label: "Promedio " + (P.anios.length > 1 ? P.anios[0] + "–" + P.anios[P.anios.length - 1] : P.anios[0]), data: P.prom.map(function (v) { return Math.round(v * 10) / 10; }), backgroundColor: osc ? "#4f5f75" : "#b4bfcc", borderRadius: 4, maxBarThickness: 22 }] },
+      options: { interaction: { mode: "index", intersect: false }, plugins: { legend: { position: "top", align: "start" } },
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: osc ? "rgba(148,163,184,.12)" : "#eef2f7" }, border: { display: false } } } } });
+  },
+
   /* ---------- presentación en diapositivas ---------- */
   diapos: [
     { t: "Resumen del año", b: function (D) { return TAB.hero(D) + TAB.kpis(D) + TAB.lectura(D); } },
     { t: "Tendencia", b: function (D) { return '<div class="grid-dash"><div class="c8">' + TAB.mesCard(D) + '</div><div class="c4">' + TAB.piramide(D) + '</div></div>'; } },
+    { t: "Frente al histórico", b: function (D) { return '<div class="grid-dash"><div class="c8">' + TAB.compCard(D) + '</div><div class="c4">' + TAB.procCard(D) + '</div></div>'; } },
     { t: "Causas", b: function (D) { return '<div class="grid-dash"><div class="c6">' + TAB.pareto(D) + '</div><div class="c6">' + TAB.nacCard(D) + '</div></div>'; } },
     { t: "Dónde y cuándo", b: function (D) { return '<div class="grid-dash"><div class="c4">' + TAB.areaCard(D) + '</div><div class="c4">' + TAB.heat(D) + '</div><div class="c4">' + TAB.matriz(D) + '</div></div>'; } },
     { t: "Seguimiento", b: function (D) { return '<div class="grid-dash"><div class="c4">' + TAB.flujo(D) + '</div><div class="c4">' + TAB.atencion(D) + '</div><div class="c4">' + TAB.contCard(D) + '</div></div>'; } }
@@ -178,17 +206,18 @@ Views.tablero = function () {
   App.titulo("Tablero de gestión SST", (S.fArea ? S.fArea + " · " : "") + "Año " + D.anio + " · " + CONFIG.EMPRESA,
     selectorArea() + selectorAnio() + (PRES.activo ? "" : '<button class="btn" onclick="TAB.pres.i=0;TAB.pres.play=true;PRES.iniciar()" title="Diapositivas a pantalla completa para el comité o un proyector">' + svg("presentar") + '<span class="hide-sm">Presentar</span></button>') +
     (L.rol() !== "COMITE" && !PRES.activo ? '<a class="btn primary" href="#/reportar">' + svg("reportar") + '<span class="hide-sm">Reportar evento</span></a>' : ""));
-  if (PRES.activo) { TAB.pintarDiapo(D); UI.contar($("#view")); TAB.graficos(D); return; }
+  if (PRES.activo) { TAB.pintarDiapo(D); UI.contar($("#view")); TAB.graficos(D); TAB.grafHist(D); return; }
   clearTimeout(TAB.pres.t);
   $("#view").innerHTML = TAB.hero(D) +
     '<div class="sec-t"><span>Lectura del año</span><small>lo que dicen los datos, en una frase</small></div>' + TAB.lectura(D) + TAB.kpis(D) +
     '<div class="grid-dash">' +
       '<div class="c8">' + TAB.mesCard(D) + '</div><div class="c4">' + TAB.piramide(D) + '</div>' +
+      '<div class="c8">' + TAB.compCard(D) + '</div><div class="c4">' + TAB.procCard(D) + '</div>' +
       '<div class="c6">' + TAB.pareto(D) + '</div><div class="c6">' + TAB.nacCard(D) + '</div>' +
       '<div class="c4">' + TAB.matriz(D) + '</div><div class="c4">' + TAB.heat(D) + '</div><div class="c4">' + TAB.flujo(D) + '</div>' +
       '<div class="c6">' + TAB.areaCard(D) + '</div><div class="c6">' + TAB.contCard(D) + '</div>' +
       '<div class="c6">' + TAB.atencion(D) + '</div><div class="c6">' + TAB.misAcc(D) + '</div>' +
     '</div>';
   UI.contar($("#view"));
-  TAB.graficos(D);
+  TAB.graficos(D); TAB.grafHist(D);
 };

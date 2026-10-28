@@ -211,12 +211,15 @@ var PEND = {
         due: d == null ? "" : d < 0 ? "Vencida hace " + (-d) + " d" : d === 0 ? "Vence hoy" : "Vence en " + d + " d", dueC: d != null && d < 0 ? "bad" : d != null && d <= 5 ? "warn" : "", cta: "Actualizar", h: "#/acciones/" + a.id });
     });
     if (L.es("ADMIN","SST")) {
-      var ef = S.acciones.filter(function (a) { return a.estado === "Cerrada" && a.eficacia !== "Sí"; });
+      var ef = S.acciones.filter(function (a) { return a.estado === "Cerrada" && a.eficacia !== "Sí" && !a.historico; });
       if (ef.length) out.push({ sev: 1, ic: "acciones", c: "ok", t: "Verificar la eficacia de " + ef.length + " acción(es) cerrada(s)", d: ef.slice(0, 3).map(function (a) { return a.id; }).join(", ") + (ef.length > 3 ? "…" : ""), cta: "Verificar", h: "#/acciones" });
     }
     if (L.es("ADMIN","SST","MEDICO")) S.descansos.forEach(function (d) {
+      var pe = diasHasta(d.prox_eval);
+      if (pe != null && pe <= 3 && d.estado_laboral !== "Alta médica") out.push({ sev: pe < 0 ? 3 : 2, ic: "descansos", c: pe < 0 ? "bad" : "info", t: "Reevaluación médica de " + d.trabajador, d: (d.estado_laboral || "En seguimiento") + " · " + d.id + (d.restricciones ? " · " + d.restricciones : ""),
+        due: pe < 0 ? "Atrasada " + (-pe) + " d" : pe === 0 ? "Hoy" : "En " + pe + " d", dueC: pe < 0 ? "bad" : "warn", cta: "Registrar", h: "#/descansos/" + d.id });
       if (d.estado === "Pendiente") out.push({ sev: 2, ic: "descansos", c: "warn", t: "Validar el descanso médico " + d.id, d: d.trabajador + " · " + d.dias + " días · " + fFecha(d.inicio) + " – " + fFecha(d.fin), cta: "Validar", h: "#/descansos/" + d.id });
-      if (d.estado !== "Observado" && !(d.adjuntos || []).length) out.push({ sev: 2, ic: "descansos", c: "bad", t: "Adjuntar el certificado del descanso " + d.id, d: d.trabajador + " · falta el sustento médico", cta: "Adjuntar", h: "#/descansos/" + d.id });
+      if (d.estado !== "Observado" && !d.historico && !(d.adjuntos || []).length) out.push({ sev: 2, ic: "descansos", c: "bad", t: "Adjuntar el certificado del descanso " + d.id, d: d.trabajador + " · falta el sustento médico", cta: "Adjuntar", h: "#/descansos/" + d.id });
     });
     return out.sort(function (a, b) { return b.sev - a.sev; });
   },

@@ -63,7 +63,8 @@ function campo(f, val, dis) {
       return pre + '<option value="' + esc(ov) + '"' + (String(ov) === String(v) ? " selected" : "") + '>' + esc(ot) + '</option>';
     }).join("") + (grupos ? "</optgroup>" : "") + '</select>';
   } else if (f.type === "textarea") inp = '<textarea id="' + id + '" data-k="' + f.k + '"' + d + (f.ph ? ' placeholder="' + esc(f.ph) + '"' : "") + '>' + esc(v) + '</textarea>';
-  else inp = '<input id="' + id + '" data-k="' + f.k + '" type="' + (f.type || "text") + '" value="' + esc(v) + '"' + d + (f.ph ? ' placeholder="' + esc(f.ph) + '"' : "") + (f.max != null ? ' max="' + f.max + '"' : "") + (f.min != null ? ' min="' + f.min + '"' : "") + (f.type === "number" ? ' inputmode="decimal"' : "") + '>';
+  else inp = '<input id="' + id + '" data-k="' + f.k + '" type="' + (f.type || "text") + '" value="' + esc(v) + '"' + d + (f.ph ? ' placeholder="' + esc(f.ph) + '"' : "") + (f.max != null ? ' max="' + f.max + '"' : "") + (f.min != null ? ' min="' + f.min + '"' : "") + (f.type === "number" ? ' inputmode="decimal"' : "") + (f.sug ? ' list="' + id + '_l" autocomplete="off"' : "") + '>' +
+    (f.sug ? '<datalist id="' + id + '_l">' + f.sug.map(function (o) { return '<option value="' + esc(o) + '">'; }).join("") + '</datalist>' : "");
   return '<div class="f ' + (f.col || "") + '"><label for="' + id + '">' + esc(f.label) + r + '</label>' + inp + (f.hint ? '<div class="hint">' + f.hint + '</div>' : "") + '</div>';
 }
 function formHTML(campos, obj, dis, cols) { return '<div class="grid ' + (cols || "g2") + '">' + campos.map(function (f) { return campo(f, obj ? obj[f.k] : "", dis); }).join("") + '</div>'; }
@@ -242,14 +243,15 @@ var L = {
       var sug = L.tipoSugerido(ev); if (sug) out.push({ sev: 1, t: "Revisar clasificación del evento", d: ev.id + " " + sug.motivo + ": ¿" + CAT.tipoTxt(sug.c) + "?", href: "#/evento/" + ev.id });
     });
     S.acciones.forEach(function (a) {
-      if (a.estado === "Cerrada") { if (a.eficacia !== "Sí" && L.es("ADMIN","SST")) out.push({ sev: 1, t: "Verificar eficacia de acción cerrada", d: a.id + " · " + a.descripcion, href: "#/evento/" + a.evento_id + "/acciones" }); return; }
+      if (a.estado === "Cerrada") { if (a.eficacia !== "Sí" && !a.historico && L.es("ADMIN","SST")) out.push({ sev: 1, t: "Verificar eficacia de acción cerrada", d: a.id + " · " + a.descripcion, href: "#/evento/" + a.evento_id + "/acciones" }); return; }
       var d = diasHasta(a.fecha_compromiso); if (d == null) return;
       if (d < 0) out.push({ sev: 3, t: "Acción vencida hace " + (-d) + " día(s)", d: a.id + " · " + a.descripcion + " · " + (a.responsable || ""), href: "#/evento/" + a.evento_id + "/acciones" });
       else if (d <= 5) out.push({ sev: 2, t: "Acción vence en " + d + " día(s)", d: a.id + " · " + a.descripcion + " · " + (a.responsable || ""), href: "#/evento/" + a.evento_id + "/acciones" });
     });
     S.descansos.forEach(function (d) {
       if (d.estado === "Pendiente" && L.es("ADMIN","SST","MEDICO")) out.push({ sev: 2, t: "Descanso médico por validar", d: d.id + " · " + d.trabajador + " · " + d.dias + " días", href: "#/descansos" });
-      if (d.estado !== "Observado" && !(d.adjuntos || []).length) out.push({ sev: 2, t: "Descanso médico sin sustento adjunto", d: d.id + " · " + d.trabajador, href: "#/descansos" });
+      if (d.estado !== "Observado" && !d.historico && !(d.adjuntos || []).length) out.push({ sev: 2, t: "Descanso médico sin sustento adjunto", d: d.id + " · " + d.trabajador, href: "#/descansos" });
+      var pe = diasHasta(d.prox_eval); if (pe != null && pe <= 3 && d.estado_laboral !== "Alta médica" && L.es("ADMIN","SST","MEDICO")) out.push({ sev: pe < 0 ? 3 : 2, t: pe < 0 ? "Reevaluación médica atrasada " + (-pe) + " día(s)" : pe === 0 ? "Reevaluación médica hoy" : "Reevaluación médica en " + pe + " día(s)", d: d.trabajador + " · " + (d.estado_laboral || "seguimiento") + " · " + d.id, href: "#/descansos/" + d.id });
       var f = diasHasta(d.fin); if (f != null && f >= 0 && f <= 2 && d.estado !== "Observado") out.push({ sev: 1, t: "Retorno del trabajador en " + f + " día(s)", d: d.trabajador + " · coordinar alta y reincorporación", href: "#/descansos" });
     });
     return out.sort(function (a, b) { return b.sev - a.sev; });
@@ -348,7 +350,9 @@ var App = {
       S.eventos.sort(function (a, b) { return (b.fecha + b.hora) < (a.fecha + a.hora) ? -1 : 1; });
       $("#login").hidden = true; $("#app").hidden = false;
       $("#uNom").textContent = S.user.nombre; $("#uRol").textContent = (CAT.roles[S.user.rol] || {}).t || S.user.rol; $("#uAv").textContent = iniciales(S.user.nombre);
-      TEMA.aplicar(); App.route(); AVISOS.iniciar(); return true;
+      TEMA.aplicar(); App.route(); AVISOS.iniciar();
+      HIST.servidorListo().then(function (ok) { S.srv24 = ok; });     // los campos clínicos nuevos solo se muestran si el servidor ya los protege
+      return true;
     });
   },
   recargar: function () { DOCS.cache = {}; return App.cargar(); },
@@ -559,7 +563,7 @@ Views.alertas = function () {
 Views.eventos = function (p, soloInv) {
   var f = S.filtros.ev || (S.filtros.ev = { q: "", tipo: "", estado: "", anio: "" });
   App.titulo(soloInv ? "Investigaciones" : "Registro de eventos", soloInv ? "Bandeja de investigaciones en curso y su avance" : "Todos los accidentes, incidentes y enfermedades ocupacionales",
-    selectorArea() + '<button class="btn" onclick="exportarEventos()">⬇ <span class="hide-sm">Exportar</span></button>' + (L.rol() !== "COMITE" ? '<a class="btn primary" href="#/reportar">' + svg("reportar") + '<span class="hide-sm">Reportar</span></a>' : ""));
+    selectorArea() + (L.rol() === "ADMIN" && !soloInv ? '<button class="btn" onclick="HIST.abrir()" title="Cargar el resumen histórico de SSOMA (Excel)">⬆ <span class="hide-sm">Importar histórico</span></button>' : "") + '<button class="btn" onclick="exportarEventos()">⬇ <span class="hide-sm">Exportar</span></button>' + (L.rol() !== "COMITE" ? '<a class="btn primary" href="#/reportar">' + svg("reportar") + '<span class="hide-sm">Reportar</span></a>' : ""));
   var anios = {}; S.eventos.forEach(function (e) { anios[String(e.fecha).slice(0, 4)] = 1; });
   function sel(k, l, o) { return '<select onchange="S.filtros.ev.' + k + '=this.value;pintarEventos(' + !!soloInv + ')"><option value="">' + l + ': todos</option>' + o.map(function (x) { var v = x.v || x, t = x.t || x; return '<option value="' + esc(v) + '"' + (f[k] == v ? " selected" : "") + '>' + esc(t) + '</option>'; }).join("") + '</select>'; }
   $("#view").innerHTML = '<div class="toolbar"><input type="search" placeholder="Buscar código, trabajador, lugar, descripción…" value="' + esc(f.q) + '" oninput="S.filtros.ev.q=this.value;pintarEventosD(' + !!soloInv + ')">' +
@@ -609,7 +613,8 @@ var CAMPOS_EVENTO = [
   { k: "area", label: "Área ▸ División (Panel SSOMA)", type: "select", req: true, opts: [] },
   { k: "ambito", label: "Ámbito del trabajo", type: "select", opts: CAT.ambito },
   { k: "lugar", label: "Lugar exacto / dirección", ph: "Ej.: Av. Universitaria cdra. 30, poste P-1234", col: "span2" },
-  { k: "tarea", label: "Tarea que se realizaba", col: "span2", ph: "Ej.: tendido de cable aéreo de fibra óptica" },
+  { k: "proceso", label: "Proceso / actividad", type: "select", opts: CAT.proceso, hint: "Permite comparar qué procesos concentran los eventos." },
+  { k: "tarea", label: "Tarea que se realizaba", ph: "Ej.: tendido de cable aéreo de fibra óptica" },
   { k: "descripcion", label: "¿Qué pasó? (descripción del suceso)", type: "textarea", req: true, col: "span2", ph: "Qué, cómo, cuándo y dónde. Solo hechos." }
 ];
 function camposEvento() { var c = clone(CAMPOS_EVENTO); c.filter(function (x) { return x.k === "area"; })[0].opts = optsDivisiones(); return c; }
@@ -719,10 +724,15 @@ var DM = {
       { k: "area", label: "Área ▸ División", type: "select", opts: optsDivisiones(), col: "span2" }, { k: "origen", label: "Origen", type: "select", req: true, opts: CAT.dmOrigen, hint: "Solo «Accidente de trabajo» suma días perdidos al IS." },
       { k: "evento_id", label: "Evento vinculado", type: "select", opts: evOpts, col: "span2" }, { k: "documento", label: "Tipo de documento", type: "select", req: true, opts: CAT.dmDocumento },
       { k: "inicio", label: "Inicio del descanso", type: "date", req: true }, { k: "fin", label: "Fin del descanso", type: "date", req: true }, { k: "prorroga_de", label: "Es prórroga de", type: "select", opts: dmOpts },
-      { k: "centro", label: "Centro médico / establecimiento", col: "span3" }];
-    var C2 = [{ k: "medico", label: "Médico tratante" }, { k: "cmp", label: "CMP" }, { k: "cie10", label: "CIE-10", ph: "Ej.: S82.6" }, { k: "diagnostico", label: "Diagnóstico", col: "span2" },
+      { k: "centro", label: "Centro médico / establecimiento", col: "span2" }, { k: "seguro", label: "Seguro que cubre la atención", type: "select", opts: CAT.seguro }];
+    var C2 = [{ k: "medico", label: "Médico tratante" }, { k: "cmp", label: "CMP" }, { k: "cie10", label: "CIE-10", ph: "Ej.: S82.6" }, { k: "diagnostico", label: "Diagnóstico", col: "span2", sug: CAT.diagFrecuentes, ph: "Escribe o elige uno frecuente" },
       { k: "estado", label: "Estado de validación", type: "select", opts: CAT.dmEstado }, { k: "observacion_medica", label: "Observación del área médica", type: "textarea", col: "span3" },
-      { k: "retorno", label: "Fecha de reincorporación / alta", type: "date" }, { k: "restricciones", label: "Restricciones al retorno", ph: "Ej.: no trabajos en altura por 15 días", col: "span2" }];
+      { k: "gravedad_clinica", label: "Gravedad clínica", type: "select", opts: CAT.gravedadClinica }, { k: "organo", label: "Órgano / zona afectada", sug: ["Dedo de la mano","Mano","Muñeca","Codo","Hombro","Columna lumbar","Cabeza","Ojo","Pierna","Rodilla","Tobillo","Pie"] },
+      { k: "terapia", label: "Terapia física", type: "select", opts: ["No","Sí, en curso","Sí, concluida"] },
+      { k: "seguimiento", label: "Seguimiento / evolución", type: "textarea", col: "span3", ph: "Ej.: cirugía programada, terapias desde el 27/02, en espera de carta de garantía…" },
+      { k: "estado_laboral", label: "Situación laboral actual", type: "select", opts: CAT.dmEstadoLaboral }, { k: "prox_eval", label: "Próxima evaluación médica", type: "date", hint: "Avisa al área médica en «Mis pendientes»." },
+      { k: "retorno", label: "Fecha de reincorporación / alta", type: "date" }, { k: "restricciones", label: "Restricciones al retorno", ph: "Ej.: no trabajos en altura por 15 días", col: "span3" }];
+    if (!S.srv24 && CONFIG.ENDPOINT_URL) C2 = C2.filter(function (f) { return ["terapia","seguimiento","gravedad_clinica","organo"].indexOf(f.k) < 0; });
     var body = '<div id="dmF">' + formHTML(C1, d, !puede, "g3") + '<div class="callout info mt" id="dmDias"></div><hr class="sep"><div class="sub-h">Datos médicos ' + (med ? "" : "🔒 (reservados al área médica)") + '</div>' + formHTML(C2, d, !med, "g3") + '</div>' +
       '<hr class="sep"><div class="sub-h">Sustento (certificado / CITT / informe) <span class="req">*</span></div>' + (id ? adjuntosHTML("descansos", d, L.es("ADMIN","SST")) : "") +
       (puede ? '<label class="drop mt" for="dmFile">📎 Adjuntar certificado (PDF o foto, máx. 10 MB)<input type="file" id="dmFile" multiple accept="image/*,application/pdf" hidden onchange="document.getElementById(\'dmFileN\').textContent=this.files.length+\' archivo(s) listo(s) para subir\'"></label><div class="small muted" id="dmFileN"></div>' : "") +
@@ -731,9 +741,11 @@ var DM = {
       onOpen: function (m) {
         function calc() {
           var a = $('[data-k="inicio"]', m).value, b = $('[data-k="fin"]', m).value, n = a && b ? Math.round((new Date(b) - new Date(a)) / 864e5) + 1 : 0;
-          $("#dmDias", m).innerHTML = n > 0 ? "📅 <b>" + n + " día(s) de descanso</b>" + (n > 1 ? " — si es por accidente de trabajo, el evento califica como <b>incapacitante</b>." : " — retorno al día siguiente: califica como accidente <b>leve</b>.") : (a && b ? '<span style="color:#b91c1c">La fecha fin es anterior al inicio.</span>' : "Indica inicio y fin para calcular los días.");
+          var ref = med ? HIST.refDias($('[data-k="organo"]', m) && $('[data-k="organo"]', m).value, $('[data-k="gravedad_clinica"]', m) && $('[data-k="gravedad_clinica"]', m).value, id) : "";
+          $("#dmDias", m).innerHTML = (ref ? ref + "<br>" : "") + (n > 0 ? "📅 <b>" + n + " día(s) de descanso</b>" + (n > 1 ? " — si es por accidente de trabajo, el evento califica como <b>incapacitante</b>." : " — retorno al día siguiente: califica como accidente <b>leve</b>.") : (a && b ? '<span style="color:#b91c1c">La fecha fin es anterior al inicio.</span>' : "Indica inicio y fin para calcular los días."));
         }
         $('[data-k="inicio"]', m).addEventListener("change", calc); $('[data-k="fin"]', m).addEventListener("change", calc); calc();
+        ["organo","gravedad_clinica"].forEach(function (k) { var el = $('[data-k="' + k + '"]', m); if (el) el.addEventListener("change", calc); });
         var evSel = $('[data-k="evento_id"]', m);
         evSel.addEventListener("change", function () { var e = L.evento(evSel.value); if (e) { if (!$('[data-k="trabajador"]', m).value) $('[data-k="trabajador"]', m).value = e.trabajador || ""; if (!$('[data-k="dni_trab"]', m).value) $('[data-k="dni_trab"]', m).value = e.dni_trab || ""; $('[data-k="area"]', m).value = e.area; $('[data-k="origen"]', m).value = "Accidente de trabajo"; } });
       },

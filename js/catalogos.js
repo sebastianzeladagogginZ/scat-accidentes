@@ -220,6 +220,15 @@ CAT.evidencias = [
 CAT.dmOrigen = ["Accidente de trabajo","Enfermedad ocupacional","Enfermedad común","Accidente común","Maternidad / otro"];
 CAT.dmDocumento = ["CITT EsSalud","Certificado médico particular","Descanso médico de clínica / EPS","Certificado de SCTR","Informe médico"];
 CAT.dmEstado = ["Pendiente","Validado","Observado"];
+/* Aprendido del histórico 2023-2026 (resúmenes de SSOMA): procesos con más casos, seguimiento médico que se registraba a mano
+   y diagnósticos más frecuentes. Solo categorías: no contiene datos de ninguna persona. */
+CAT.proceso = ["Instalación FTTH / fibra óptica","Mantenimiento de red","Planta externa (PEXT)","Normalización / actualización de red","Habilitación de edificios",
+  "Obras civiles","Crecimiento horizontal","Empalmes","Conducción de vehículo","Almacén / logística","Inspección y diseño","Oficina / administrativo","Otro"];
+CAT.dmEstadoLaboral = ["Descanso médico","Trabajo con restricciones","Trabajo sin restricciones","Alta médica"];
+CAT.seguro = ["SCTR","EPS / ONI","SOAT","EsSalud","Particular","No aplica"];
+CAT.gravedadClinica = ["Leve","Moderado","Grave"];
+CAT.diagFrecuentes = ["Contusión leve","Contusión en mano / dedo","Herida cortante en dedo de la mano","Herida punzante","Herida en la cabeza","Traumatismo por aplastamiento de dedo",
+  "Esguince de tobillo","Esguince de muñeca","Lumbalgia / lumbago","Tendinopatía del supraespinoso","Tenosinovitis","Fractura","Hernia / ruptura de disco lumbar","Cuerpo extraño en ojo","Quemadura"];
 
 /* ---- Acciones ---- */
 CAT.accTipo = ["Inmediata","Correctiva","Preventiva"];
