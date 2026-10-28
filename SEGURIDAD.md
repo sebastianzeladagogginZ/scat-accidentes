@@ -66,6 +66,13 @@ Se revisó el código nuevo de navegación (`js/guia.js`) con estas comprobacion
 - **Salvaguardas mientras el servidor no esté en 2.4:** la app no muestra los campos clínicos nuevos y bloquea la importación. Así nunca quedan expuestos ni se importa sin protección.
 - **Biblioteca nueva:** el lector de Excel (SheetJS 0.18.5) se carga desde cdnjs solo al importar, dentro de la política de contenido (CSP) existente.
 
+## Roles y descansos médicos (v3.5 · servidor 2.5, 28/10/2026)
+
+- **Área médica con uso exclusivo de los descansos médicos.** Solo la doctora y la enfermera ocupacional (rol MÉDICO) pueden registrar, editar y validar descansos, adjuntar sustentos o retirarlos. SSOMA los consulta en modo lectura. El servidor rechaza cualquier otro intento; la única excepción es la importación única del histórico por parte del administrador.
+- **SSOMA con el mismo nivel:** los cuatro integrantes de SSOMA tienen rol Administrador. El cambio se aplica una sola vez en la hoja «Usuarios» y queda en la trazabilidad (`usuarios_sincronizar`).
+- **Puesto real en las firmas:** el puesto de cada persona se guarda en «Usuarios» y aparece en los formatos firmados y bajo su nombre.
+- **El ingreso ya no recuerda a nadie:** la pantalla de ingreso no muestra ingresos anteriores y se borra lo que estaba guardado en cada equipo. Solo se escribe el número de documento.
+
 ## Riesgos aceptados y mitigación
 
 1. **El web app tiene acceso "Cualquier usuario".** Es necesario para que la app de GitHub se conecte. La dirección responde a cualquiera, pero **no entrega datos sin iniciar sesión**; se probó que devuelve `sesion_invalida` y `credenciales`.

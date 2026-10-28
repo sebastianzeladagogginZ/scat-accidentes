@@ -15,7 +15,7 @@ var CONFIG = {
   META_IF: 5, META_IS: 100,  // metas anuales para los medidores del tablero
   SELFIE_PX: 260, FIRMA_W: 420, FIRMA_H: 150
 };
-var APP_VERSION = "V3.4.1";
+var APP_VERSION = "V3.5";
 // Solo en el equipo de desarrollo (localhost): ?demo usa los datos de ejemplo y nunca toca la base real.
 if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && /[?&]demo/.test(location.search)) CONFIG.ENDPOINT_URL = "";
 
@@ -110,9 +110,9 @@ var MOCK = (function () {
       return "Solo el responsable, el jefe de la división o SSOMA pueden modificar esta acción.";
     }
     if (ent === "descansos") {
-      if (MED.indexOf(r) >= 0) return true;
-      if (r === "JEFE") return (antes && antes.estado === "Validado") ? "Descanso ya validado por el área médica." : true;
-      return "Sin permiso para registrar descansos médicos.";
+      if (r === "MEDICO") return true;
+      if (r === "ADMIN" && !antes && nuevo && nuevo.historico) return true;
+      return "Los descansos médicos los registra y edita solo el área médica (doctora y enfermera ocupacional).";
     }
     return "Sin permiso.";
   }
@@ -241,7 +241,7 @@ var MOCK = (function () {
     subir: function (b, u) {
       var d = byId(b.entidad, b.id); if (!d) return { ok: false, msg: "No encontrado" };
       if (u.rol === "COMITE" && b.categoria !== "PDF firmado") return { ok: false, msg: "Solo consulta." };
-      if (b.entidad === "descansos" && ["ADMIN","SST","MEDICO","JEFE"].indexOf(u.rol) < 0) return { ok: false, msg: "Sin permiso." };
+      if (b.entidad === "descansos" && u.rol !== "MEDICO" && b.categoria !== "PDF firmado") return { ok: false, msg: "Los sustentos médicos los adjunta solo el área médica." };
       var adj = { id: "F" + Math.random().toString(36).slice(2, 10), nombre: b.nombre, mime: b.mime, bytes: Math.round(String(b.b64).length * 0.75), categoria: b.categoria || "General", doc: b.doc || "", ts: now(), por: u.nombre };
       db.archivos[adj.id] = String(b.b64).length < 1400000 ? b.b64 : null;
       d.adjuntos = d.adjuntos || [];
@@ -260,7 +260,7 @@ var MOCK = (function () {
       return { ok: true, nombre: a.nombre, mime: a.mime, b64: db.archivos[a.id] };
     },
     quitar_adjunto: function (b, u) {
-      if (u.rol !== "ADMIN" && u.rol !== "SST") return { ok: false, msg: "Solo SSOMA retira adjuntos." };
+      if (b.entidad === "descansos" ? u.rol !== "MEDICO" : (u.rol !== "ADMIN" && u.rol !== "SST")) return { ok: false, msg: b.entidad === "descansos" ? "Solo el área médica retira sustentos médicos." : "Solo SSOMA retira adjuntos." };
       var d = byId(b.entidad, b.id), a = (d.adjuntos || []).filter(function (x) { return x.id === b.adjunto; })[0];
       d.adjuntos = d.adjuntos.filter(function (x) { return x.id !== b.adjunto; });
       d.version++; audit(u, "retirar_adjunto", b.entidad, d.id, a.nombre + " (el archivo se conserva)"); save();

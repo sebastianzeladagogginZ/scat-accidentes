@@ -124,7 +124,7 @@ var GUIA = {
       case "reporte": o.quien = "Quien reportó o SSOMA"; break;
       case "inmediatas": case "mtpe": o.quien = "SSOMA (Supervisor SST)"; break;
       case "equipo": o.quien = "SSOMA o jefe del área"; o.nota = "Elige a los integrantes: cada uno firmará el análisis y el registro."; break;
-      case "dm": o.quien = "Médico ocupacional"; o.puede = L.es("ADMIN","SST","MEDICO"); o.nota = "Registra el descanso y adjunta el certificado."; break;
+      case "dm": o.quien = "Área médica (doctora o enfermera ocupacional)"; o.puede = L.es("MEDICO"); o.nota = "Registra el descanso y adjunta el certificado."; break;
       case "firmas":
         var nom = fal.map(function (x) { return x.quien + " (" + x.corto + ")"; }), u = {}; nom = nom.filter(function (x) { return u[x] ? false : (u[x] = 1); });
         o.t = mias.length ? "Te toca firmar: " + mias.map(function (x) { return x.corto; }).filter(function (x, i, a) { return a.indexOf(x) === i; }).join(", ") : "Faltan " + fal.length + " firma(s)";
@@ -214,7 +214,7 @@ var PEND = {
       var ef = S.acciones.filter(function (a) { return a.estado === "Cerrada" && a.eficacia !== "Sí" && !a.historico; });
       if (ef.length) out.push({ sev: 1, ic: "acciones", c: "ok", t: "Verificar la eficacia de " + ef.length + " acción(es) cerrada(s)", d: ef.slice(0, 3).map(function (a) { return a.id; }).join(", ") + (ef.length > 3 ? "…" : ""), cta: "Verificar", h: "#/acciones" });
     }
-    if (L.es("ADMIN","SST","MEDICO")) S.descansos.forEach(function (d) {
+    if (L.es("MEDICO")) S.descansos.forEach(function (d) {
       var pe = diasHasta(d.prox_eval);
       if (pe != null && pe <= 3 && d.estado_laboral !== "Alta médica") out.push({ sev: pe < 0 ? 3 : 2, ic: "descansos", c: pe < 0 ? "bad" : "info", t: "Reevaluación médica de " + d.trabajador, d: (d.estado_laboral || "En seguimiento") + " · " + d.id + (d.restricciones ? " · " + d.restricciones : ""),
         due: pe < 0 ? "Atrasada " + (-pe) + " d" : pe === 0 ? "Hoy" : "En " + pe + " d", dueC: pe < 0 ? "bad" : "warn", cta: "Registrar", h: "#/descansos/" + d.id });
@@ -248,7 +248,7 @@ Views.inicio = function () {
   var pend = PEND.lista(), urg = pend.filter(function (x) { return x.sev >= 3; }).length;
   App.titulo("Inicio", "Lo que te toca hacer hoy");
   var fecha = hoy.toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long" }); fecha = fecha.charAt(0).toUpperCase() + fecha.slice(1);
-  var h = '<section class="ini-head"><div><div class="ih-k">' + esc(fecha) + ' · ' + esc((CAT.roles[r] || {}).t || r) + '</div><h2>' + esc(saludo) + '</h2>' +
+  var h = '<section class="ini-head"><div><div class="ih-k">' + esc(fecha) + ' · ' + esc(S.user.cargo || (CAT.roles[r] || {}).t || r) + '</div><h2>' + esc(saludo) + '</h2>' +
     '<p>' + (pend.length ? 'Tienes <b>' + pend.length + '</b> ' + (pend.length === 1 ? "tarea pendiente" : "tareas pendientes") + (urg ? ', <b class="t-bad">' + urg + ' urgente' + (urg > 1 ? "s" : "") + '</b>' : "") + '.' : "Estás al día: no tienes tareas pendientes.") + '</p></div>' +
     '<div class="ih-act">' + (r !== "COMITE" ? '<a class="btn on-btn lg" href="#/reportar">' + svg("reportar") + 'Reportar evento</a>' : "") +
     '<button class="btn lg ih-bus" onclick="BUSCAR.abrir()">' + svg("buscar") + 'Buscar un caso<kbd>Ctrl K</kbd></button></div></section>';

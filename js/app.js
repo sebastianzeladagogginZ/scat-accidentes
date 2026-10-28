@@ -85,16 +85,7 @@ function areaChip(c) { return '<span class="achip"><b>' + esc(CAT.areaDe(c)) + '
 
 /* ---------- ingreso con DNI / CE ---------- */
 function tipoDoc(n) { return /^\d{8}$/.test(String(n)) ? "DNI" : "CE"; }
-var RECIENTES = {                       // solo nombre y rol de quienes ingresaron en este equipo (no hay claves)
-  KEY: "scat_recientes",
-  _leer: function () { try { return JSON.parse(localStorage.getItem(RECIENTES.KEY) || "{}") || {}; } catch (e) { return {}; } },
-  _escribir: function (m) { try { localStorage.setItem(RECIENTES.KEY, JSON.stringify(m)); } catch (e) {} },
-  de: function (dni) { return RECIENTES._leer()[dni] || null; },
-  todos: function () { var m = RECIENTES._leer(); return Object.keys(m).map(function (k) { return Object.assign({ dni: k }, m[k]); }).sort(function (a, b) { return b.ts - a.ts; }).slice(0, 5); },
-  guardar: function (dni, u) { var m = RECIENTES._leer(); m[dni] = { nombre: u.nombre, rol: u.rol, cargo: u.cargo || "", ts: Date.now() }; RECIENTES._escribir(m); },
-  quitar: function (dni) { var m = RECIENTES._leer(); delete m[dni]; RECIENTES._escribir(m); },
-  borrar: function () { RECIENTES._escribir({}); }
-};
+var RECIENTES = { KEY: "scat_recientes", borrar: function () { try { localStorage.removeItem(RECIENTES.KEY); } catch (e) {} } };   // ya no se recuerdan ingresos: solo el número } catch (e) { return {}; } },
 
 /* ---------- archivos ---------- */
 function leerArchivo(file) { return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = rej; r.readAsDataURL(file); }); }
@@ -249,9 +240,9 @@ var L = {
       else if (d <= 5) out.push({ sev: 2, t: "Acción vence en " + d + " día(s)", d: a.id + " · " + a.descripcion + " · " + (a.responsable || ""), href: "#/evento/" + a.evento_id + "/acciones" });
     });
     S.descansos.forEach(function (d) {
-      if (d.estado === "Pendiente" && L.es("ADMIN","SST","MEDICO")) out.push({ sev: 2, t: "Descanso médico por validar", d: d.id + " · " + d.trabajador + " · " + d.dias + " días", href: "#/descansos" });
-      if (d.estado !== "Observado" && !d.historico && !(d.adjuntos || []).length) out.push({ sev: 2, t: "Descanso médico sin sustento adjunto", d: d.id + " · " + d.trabajador, href: "#/descansos" });
-      var pe = diasHasta(d.prox_eval); if (pe != null && pe <= 3 && d.estado_laboral !== "Alta médica" && L.es("ADMIN","SST","MEDICO")) out.push({ sev: pe < 0 ? 3 : 2, t: pe < 0 ? "Reevaluación médica atrasada " + (-pe) + " día(s)" : pe === 0 ? "Reevaluación médica hoy" : "Reevaluación médica en " + pe + " día(s)", d: d.trabajador + " · " + (d.estado_laboral || "seguimiento") + " · " + d.id, href: "#/descansos/" + d.id });
+      if (d.estado === "Pendiente" && L.es("MEDICO")) out.push({ sev: 2, t: "Descanso médico por validar", d: d.id + " · " + d.trabajador + " · " + d.dias + " días", href: "#/descansos" });
+      if (d.estado !== "Observado" && !d.historico && L.es("MEDICO") && !(d.adjuntos || []).length) out.push({ sev: 2, t: "Descanso médico sin sustento adjunto", d: d.id + " · " + d.trabajador, href: "#/descansos" });
+      var pe = diasHasta(d.prox_eval); if (pe != null && pe <= 3 && d.estado_laboral !== "Alta médica" && L.es("MEDICO")) out.push({ sev: pe < 0 ? 3 : 2, t: pe < 0 ? "Reevaluación médica atrasada " + (-pe) + " día(s)" : pe === 0 ? "Reevaluación médica hoy" : "Reevaluación médica en " + pe + " día(s)", d: d.trabajador + " · " + (d.estado_laboral || "seguimiento") + " · " + d.id, href: "#/descansos/" + d.id });
       var f = diasHasta(d.fin); if (f != null && f >= 0 && f <= 2 && d.estado !== "Observado") out.push({ sev: 1, t: "Retorno del trabajador en " + f + " día(s)", d: d.trabajador + " · coordinar alta y reincorporación", href: "#/descansos" });
     });
     return out.sort(function (a, b) { return b.sev - a.sev; });
@@ -301,7 +292,7 @@ var App = {
     }
     $("#loginForm").onsubmit = function (e) { e.preventDefault(); App.login(); };
     $("#lgDni").addEventListener("input", function () { App.revisarDni(); });
-    try { localStorage.removeItem("scat_equipos"); } catch (e) {}                         // formato anterior (v2.2)
+    try { localStorage.removeItem("scat_equipos"); } catch (e) {} RECIENTES.borrar();                         // formato anterior (v2.2)
     try { Object.keys(localStorage).forEach(function (k) { if (/^scat_(vistos|tour)_\d+$/.test(k)) localStorage.removeItem(k); }); } catch (e) {}   // claves con DNI en claro
     window.addEventListener("hashchange", App.navegar);
     API.areasPanel().then(function (fuente) { S.fuenteAreas = fuente; });
@@ -309,20 +300,12 @@ var App = {
     if (t) { API.token = t; App.cargar().then(function (ok) { if (!ok) App.mostrarLogin(); }); } else App.mostrarLogin();
     if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(function () {});
   },
-  mostrarLogin: function () { $("#login").hidden = false; $("#app").hidden = true; TEMA.aplicar(false); if (PRES.activo) PRES.salir(); CARATULAS.iniciar(); App.pintarRecordados(); App.revisarDni(); setTimeout(function () { $("#lgDni").focus(); }, 50); },
-  /* Ingreso solo con el documento registrado: detecta DNI / CE y reconoce perfiles usados en este equipo. */
+  mostrarLogin: function () { $("#login").hidden = false; $("#app").hidden = true; TEMA.aplicar(false); if (PRES.activo) PRES.salir(); CARATULAS.iniciar(); App.revisarDni(); setTimeout(function () { $("#lgDni").focus(); }, 50); },
+  /* Ingreso solo con el documento registrado: detecta si es DNI o CE (no muestra ni recuerda ingresos anteriores). */
   revisarDni: function () {
     var inp = $("#lgDni"); inp.value = inp.value.replace(/\D/g, "").slice(0, 12);
-    var dni = inp.value, e = RECIENTES.de(dni), tipo = $("#lgTipo");
+    var dni = inp.value, tipo = $("#lgTipo");
     tipo.hidden = dni.length < 8; tipo.textContent = tipoDoc(dni); tipo.className = "lg-tipo" + (tipoDoc(dni) === "CE" ? " ce" : "");
-    $("#lgPerfil").hidden = !e;
-    if (e) $("#lgPerfil").innerHTML = '<div class="av">' + iniciales(e.nombre) + '</div><div style="min-width:0"><b>' + esc(e.nombre) + '</b><div class="sub">' + esc((CAT.roles[e.rol] || {}).t || e.rol) + (e.cargo ? " · " + esc(e.cargo) : "") + '</div></div>';
-  },
-  pintarRecordados: function () {
-    var l = RECIENTES.todos();
-    $("#lgRecordados").innerHTML = l.length ? '<div class="lg-rec-t">Accesos recientes en este equipo<button type="button" onclick="RECIENTES.borrar();App.pintarRecordados();App.revisarDni()">Olvidar</button></div>' + l.map(function (e) {
-      return '<button type="button" class="lg-rec" onclick="$(\'#lgDni\').value=\'' + e.dni + '\';App.revisarDni();App.login()"><div class="av">' + iniciales(e.nombre) + '</div><div><b>' + esc(e.nombre) + '</b><span>' + esc((CAT.roles[e.rol] || {}).t || e.rol) + ' · ' + tipoDoc(e.dni) + ' ' + e.dni.slice(0, 2) + '••••' + e.dni.slice(-2) + '</span></div><span class="go">›</span></button>';
-    }).join("") : "";
   },
   login: function () {
     var dni = $("#lgDni").value.replace(/\D/g, "");
@@ -333,7 +316,6 @@ var App = {
       loading(false);
       if (!r.ok) { $("#lgErr").textContent = r.msg || "No se pudo ingresar."; $(".login-card").classList.add("shake"); setTimeout(function () { $(".login-card").classList.remove("shake"); }, 400); return; }
       API.token = r.token; try { sessionStorage.setItem("scat_tk", r.token); } catch (x) {}
-      RECIENTES.guardar(dni, r.user);
       App.cargar();
     });
   },
@@ -349,7 +331,7 @@ var App = {
       S.user = r.user; S.eventos = r.eventos; S.acciones = r.acciones; S.descansos = r.descansos; S.hht = r.hht; S.equipo = r.equipo; S.firmasResumen = r.firmasResumen || {};
       S.eventos.sort(function (a, b) { return (b.fecha + b.hora) < (a.fecha + a.hora) ? -1 : 1; });
       $("#login").hidden = true; $("#app").hidden = false;
-      $("#uNom").textContent = S.user.nombre; $("#uRol").textContent = (CAT.roles[S.user.rol] || {}).t || S.user.rol; $("#uAv").textContent = iniciales(S.user.nombre);
+      $("#uNom").textContent = S.user.nombre; $("#uRol").textContent = S.user.cargo || (CAT.roles[S.user.rol] || {}).t || S.user.rol; $("#uAv").textContent = iniciales(S.user.nombre);
       TEMA.aplicar(); App.route(); AVISOS.iniciar();
       HIST.servidorListo().then(function (ok) { S.srv24 = ok; });     // los campos clínicos nuevos solo se muestran si el servidor ya los protege
       return true;
@@ -670,7 +652,7 @@ Views.reportar = function () {
 
 /* ---------- DESCANSOS MÉDICOS ---------- */
 Views.descansos = function () {
-  var f = S.filtros.dm || (S.filtros.dm = { q: "", estado: "", origen: "" }), puedeReg = L.es("ADMIN","SST","MEDICO","JEFE"), hoy = hoyISO(), anio = S.anio;
+  var f = S.filtros.dm || (S.filtros.dm = { q: "", estado: "", origen: "" }), puedeReg = L.es("MEDICO"), hoy = hoyISO(), anio = S.anio;
   var base = S.descansos.filter(function (d) { return L.enFiltroArea(d.area); });
   var enDM = base.filter(function (d) { return d.inicio <= hoy && d.fin >= hoy && d.estado !== "Observado"; });
   var dpAT = base.filter(function (d) { return d.origen === "Accidente de trabajo" && d.estado !== "Observado" && String(d.inicio).slice(0, 4) == anio; }).reduce(function (s, d) { return s + d.dias; }, 0);
@@ -679,7 +661,7 @@ Views.descansos = function () {
   $("#view").innerHTML = '<div class="kpis">' + kpi("En descanso hoy", enDM.length, enDM.map(function (d) { return d.trabajador.split(" ")[0]; }).join(", ") || "nadie", enDM.length ? "warn" : "ok") +
     kpi("Días perdidos AT " + anio, dpAT, "alimentan el índice de severidad", "") + kpi("Por validar", base.filter(function (d) { return d.estado === "Pendiente"; }).length, "revisión del área médica", "purple") +
     kpi("Sin sustento", base.filter(function (d) { return !(d.adjuntos || []).length && d.estado !== "Observado"; }).length, "falta adjuntar certificado", "bad") + '</div>' +
-    (L.es("ADMIN","SST","MEDICO") ? "" : '<div class="callout info mb">🔒 El diagnóstico y el documento médico son datos sensibles (Ley 29733): solo los ven el área médica y SSOMA.</div>') +
+    (L.es("MEDICO") ? "" : '<div class="callout info mb"><span>🩺</span><div><b>Gestionado por el área médica</b>La doctora y la enfermera ocupacional registran, validan y dan seguimiento a los descansos. ' + (L.es("ADMIN","SST") ? "SSOMA los consulta en modo lectura." : "El diagnóstico y el documento médico son datos sensibles (Ley 29733).") + '</div></div>') +
     '<div class="toolbar"><input type="search" placeholder="Buscar trabajador, DNI, evento…" value="' + esc(f.q) + '" oninput="S.filtros.dm.q=this.value;pintarDMD()">' +
     '<select onchange="S.filtros.dm.estado=this.value;pintarDM()"><option value="">Estado: todos</option>' + CAT.dmEstado.map(function (x) { return '<option' + (f.estado === x ? " selected" : "") + '>' + x + '</option>'; }).join("") + '</select>' +
     '<select onchange="S.filtros.dm.origen=this.value;pintarDM()"><option value="">Origen: todos</option>' + CAT.dmOrigen.map(function (x) { return '<option' + (f.origen === x ? " selected" : "") + '>' + x + '</option>'; }).join("") + '</select></div><div id="dmList"></div>';
@@ -695,7 +677,7 @@ function filtrarDM() {
 }
 function pintarDM(lista, destino) {
   var L2 = lista || filtrarDM(), hoy = hoyISO(), el = destino || $("#dmList"); if (!el) return;
-  if (!L2.length) { el.innerHTML = vacioHTML("descansos", "No hay descansos médicos", "Aquí aparecen los certificados de incapacidad con su sustento.", L.es("ADMIN","SST","MEDICO","JEFE") ? '<button class="btn primary mt" onclick="DM.editar()">＋ Registrar descanso</button>' : ""); return; }
+  if (!L2.length) { el.innerHTML = vacioHTML("descansos", "No hay descansos médicos", "Aquí aparecen los certificados de incapacidad con su sustento.", L.es("MEDICO") ? '<button class="btn primary mt" onclick="DM.editar()">＋ Registrar descanso</button>' : ""); return; }
   el.innerHTML = '<div class="tbl-wrap"><table class="t"><thead><tr><th>Código</th><th>Trabajador</th><th>Periodo</th><th class="num">Días</th><th>Origen / evento</th><th>Documento</th><th>Diagnóstico</th><th>Sustento</th><th>Estado</th></tr></thead><tbody>' +
     L2.map(function (d) {
       var vig = d.inicio <= hoy && d.fin >= hoy;
@@ -717,7 +699,7 @@ var DM = {
     var d = id ? clone(S.descansos.filter(function (x) { return x.id === id; })[0]) : { evento_id: eventoId || "", origen: eventoId ? "Accidente de trabajo" : "", estado: "Pendiente", inicio: hoyISO() };
     var ev = d.evento_id ? L.evento(d.evento_id) : null;
     if (!id && ev) { d.trabajador = ev.trabajador; d.dni_trab = ev.dni_trab; d.area = ev.area; }
-    var med = L.es("ADMIN","SST","MEDICO"), puede = med || (L.es("JEFE") && d.estado !== "Validado");
+    var med = L.es("MEDICO"), puede = med;                       // solo el área médica edita; SSOMA ve los datos en modo lectura
     var evOpts = S.eventos.filter(function (e) { return e.estado !== "Anulado"; }).map(function (e) { return { v: e.id, t: e.id + " · " + (e.trabajador || "sin trabajador") + " · " + CAT.tipoTxt(e.tipo) }; });
     var dmOpts = S.descansos.filter(function (x) { return x.id !== d.id; }).map(function (x) { return { v: x.id, t: x.id + " · " + x.trabajador + " · hasta " + fFecha(x.fin) }; });
     var C1 = [{ k: "trabajador", label: "Trabajador", req: true, col: "span2" }, { k: "dni_trab", label: "DNI / CE", req: true },
@@ -734,7 +716,7 @@ var DM = {
       { k: "retorno", label: "Fecha de reincorporación / alta", type: "date" }, { k: "restricciones", label: "Restricciones al retorno", ph: "Ej.: no trabajos en altura por 15 días", col: "span3" }];
     if (!S.srv24 && CONFIG.ENDPOINT_URL) C2 = C2.filter(function (f) { return ["terapia","seguimiento","gravedad_clinica","organo"].indexOf(f.k) < 0; });
     var body = '<div id="dmF">' + formHTML(C1, d, !puede, "g3") + '<div class="callout info mt" id="dmDias"></div><hr class="sep"><div class="sub-h">Datos médicos ' + (med ? "" : "🔒 (reservados al área médica)") + '</div>' + formHTML(C2, d, !med, "g3") + '</div>' +
-      '<hr class="sep"><div class="sub-h">Sustento (certificado / CITT / informe) <span class="req">*</span></div>' + (id ? adjuntosHTML("descansos", d, L.es("ADMIN","SST")) : "") +
+      '<hr class="sep"><div class="sub-h">Sustento (certificado / CITT / informe) <span class="req">*</span></div>' + (id ? adjuntosHTML("descansos", d, L.es("MEDICO")) : "") +
       (puede ? '<label class="drop mt" for="dmFile">📎 Adjuntar certificado (PDF o foto, máx. 10 MB)<input type="file" id="dmFile" multiple accept="image/*,application/pdf" hidden onchange="document.getElementById(\'dmFileN\').textContent=this.files.length+\' archivo(s) listo(s) para subir\'"></label><div class="small muted" id="dmFileN"></div>' : "") +
       (d.validado_por ? '<p class="small muted mt">Validado/observado por ' + esc(d.validado_por) + ' · ' + fFechaHora(d.validado_ts) + '</p>' : "");
     modal({ title: id ? "Descanso médico " + id : "Registrar descanso médico", wide: true, body: body, ok: puede ? "Guardar" : null, cancel: puede ? "Cancelar" : "Cerrar",
@@ -947,8 +929,7 @@ Views.cuenta = function () {
     '<div class="plazo"><span>Alcance</span><span>' + (u.area === "*" ? "Todas las áreas" : String(u.area).split(";").map(areaChip).join(" ")) + '</span></div>' +
     '<div class="plazo"><span>Ingreso</span><span class="small">Con tu número de documento registrado en SSOMA</span></div>' +
     '<div class="flex mt"><button class="btn" onclick="App.logout()">Cerrar sesión</button>' +
-    (RECIENTES.de(u.dni) ? '<button class="btn ghost" onclick="RECIENTES.quitar(S.user.dni);toast(\'Quitado de los accesos recientes de este equipo\',\'ok\');Views.cuenta()">Quitarme de los accesos recientes</button>' : "") + '</div>' +
-    '<p class="small muted mt">En equipos compartidos, cierra sesión al terminar y quítate de los accesos recientes.</p></div>' +
+    '</div><p class="small muted mt">En equipos compartidos, cierra sesión al terminar.</p></div>' +
     '<div class="card" style="max-width:680px"><h3>Preferencias de este equipo</h3>' +
     '<label class="pref"><span><b>Modo oscuro</b><small>Más cómodo de noche o en sala con poca luz. Los PDF siguen saliendo en blanco.</small></span><input type="checkbox" class="sw" ' + (TEMA.actual() === "oscuro" ? "checked" : "") + ' onchange="TEMA.alternar()"></label>' +
     '<label class="pref"><span><b>Sonido de aviso</b><small>Dos notas suaves cuando llega una tarea nueva a «Mis pendientes».</small></span><input type="checkbox" class="sw" ' + (AVISOS.conf().sonido ? "checked" : "") + ' onchange="AVISOS.guardar(\'sonido\',this.checked);if(this.checked)AVISOS.sonar()"></label>' +

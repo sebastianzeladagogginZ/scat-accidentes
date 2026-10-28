@@ -389,7 +389,7 @@ EV.tabs.acciones = function (ev) {
 
 /* ---------- DESCANSOS del evento ---------- */
 EV.tabs.descansos = function (ev) {
-  var dm = L.dmDe(ev.id), dp = L.diasPerdidos(ev.id), sug = L.tipoSugerido(ev), puede = L.es("ADMIN","SST","MEDICO","JEFE") && ev.estado !== "Anulado";
+  var dm = L.dmDe(ev.id), dp = L.diasPerdidos(ev.id), sug = L.tipoSugerido(ev), puede = L.es("MEDICO") && ev.estado !== "Anulado";
   var h = '<div class="kpis">' + kpi("Días perdidos", dp, "suma de descansos por accidente de trabajo", dp ? "warn" : "ok") + kpi("Certificados", dm.length, dm.filter(function (d) { return (d.adjuntos || []).length; }).length + " con sustento", "") +
     kpi("Validados", dm.filter(function (d) { return d.estado === "Validado"; }).length, dm.filter(function (d) { return d.estado === "Pendiente"; }).length + " por validar", "purple") + '</div>';
   if (sug) h += '<div class="callout warn mb"><span>🤖</span><div><b>Clasificación sugerida: ' + esc(CAT.tipoTxt(sug.c)) + '</b>El evento ' + esc(sug.motivo) + '. ' + (EV.puede(ev) ? '<button class="btn sm mt" onclick="EV.aplicarTipo(\'' + sug.c + '\')">Reclasificar</button>' : "") + '</div></div>';

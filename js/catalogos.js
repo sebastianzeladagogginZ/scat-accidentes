@@ -238,9 +238,9 @@ CAT.estados = ["Reportado","En investigación","Observado","En revisión","Aprob
 
 /* ---- Roles ---- */
 CAT.roles = {
-  ADMIN:      {t:"Administrador SSOMA",           desc:"Todo: usuarios, auditoría, aprobar, cerrar y anular."},
+  ADMIN:      {t:"SSOMA",                         desc:"Todo lo de SSOMA: eventos, investigaciones, planes, aprobaciones, usuarios y trazabilidad. Consulta los descansos médicos."},
   SST:        {t:"Supervisor SST / Investigador", desc:"Ve todas las áreas, investiga, aprueba y verifica eficacia."},
-  MEDICO:     {t:"Médico ocupacional / Bienestar",desc:"Gestiona y valida descansos médicos (ve diagnósticos)."},
+  MEDICO:     {t:"Área médica",                   desc:"Uso exclusivo de los descansos médicos: registra, valida, adjunta sustentos y da seguimiento."},
   JEFE:       {t:"Jefe de división",              desc:"Reporta e investiga en su área/división; ejecuta sus acciones."},
   COMITE:     {t:"Comité SST",                    desc:"Consulta, observa investigaciones y firma el plan de acción."},
   REPORTANTE: {t:"Reportante",                    desc:"Reporta eventos y ve sus propios reportes."}
