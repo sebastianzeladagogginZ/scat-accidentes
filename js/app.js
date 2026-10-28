@@ -311,9 +311,11 @@ var App = {
     var dni = $("#lgDni").value.replace(/\D/g, "");
     $("#lgErr").textContent = "";
     if (!/^\d{8,12}$/.test(dni)) { $("#lgErr").textContent = "Escribe tu DNI (8 dígitos) o carné de extranjería."; $("#lgDni").focus(); return; }
-    loading(true, "Verificando…");
+    var btn = $("#lgBtn"); if (btn.disabled) return;                  // evita doble clic mientras se verifica
+    btn.disabled = true; btn.classList.add("cargando"); btn.innerHTML = '<span class="spin-b" aria-hidden="true"></span>Verificando tu documento…';
+    var listo = function () { btn.disabled = false; btn.classList.remove("cargando"); btn.textContent = "Ingresar"; };
     API.call("login", { dni: dni }).then(function (r) {
-      loading(false);
+      listo();
       if (!r.ok) { $("#lgErr").textContent = r.msg || "No se pudo ingresar."; $(".login-card").classList.add("shake"); setTimeout(function () { $(".login-card").classList.remove("shake"); }, 400); return; }
       API.token = r.token; try { sessionStorage.setItem("scat_tk", r.token); } catch (x) {}
       App.cargar();

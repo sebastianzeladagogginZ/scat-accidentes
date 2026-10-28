@@ -129,6 +129,9 @@ a{color:var(--brand2);text-decoration:none} a:hover{text-decoration:underline}
 @keyframes prog{to{width:100%}}
 .lg-show:hover .lg-dots button.on i{animation-play-state:paused}
 
+.btn.cargando{cursor:progress;opacity:1!important;filter:saturate(.85)}
+.spin-b{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:sp .8s linear infinite;flex:none}
+
 /* ===== FORM ===== */
 .f label{display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:5px}
 .req{color:var(--bad)}
@@ -510,7 +513,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
 .toast{display:flex;gap:10px;align-items:center;background:#0b2540;color:#fff;padding:12px 16px;border-radius:13px;box-shadow:var(--sh2);font-size:13px;max-width:400px;animation:pop .2s var(--ease);transition:opacity .25s,transform .25s}
 .toast.out{opacity:0;transform:translateX(20px)}
 .toast.bad{background:#991b1b}.toast.ok{background:#166534}
-.loading{position:fixed;inset:0;background:rgba(241,245,249,.6);z-index:800;display:grid;place-items:center;backdrop-filter:blur(2px)}
+.loading{position:fixed;inset:0;background:rgba(241,245,249,.6);z-index:1100;display:grid;place-items:center;backdrop-filter:blur(2px)}
 .load-box{display:flex;flex-direction:column;align-items:center;gap:10px;font-weight:700;color:var(--navy)}
 .spin{width:40px;height:40px;border:4px solid #dbeafe;border-top-color:var(--on);border-radius:50%;animation:sp .75s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -980,15 +983,15 @@ body.presenta .rk{gap:10px} body.presenta .rk-r{padding:12px 12px;grid-template-
 <div id="toasts" aria-live="polite"></div>
 <div class="loading" id="loading" hidden><div class="load-box"><div class="spin"></div><span id="loadTxt"></span></div></div>
 
-<script src="js/catalogos.js?v=3.5"></script>
-<script src="js/api.js?v=3.5"></script>
-<script src="js/app.js?v=3.5"></script>
-<script src="js/firma.js?v=3.5"></script>
-<script src="js/docs.js?v=3.5"></script>
-<script src="js/evento.js?v=3.5"></script>
-<script src="js/guia.js?v=3.5"></script>
-<script src="js/historico.js?v=3.5"></script>
-<script src="js/tablero.js?v=3.5"></script>
+<script src="js/catalogos.js?v=3.5.1"></script>
+<script src="js/api.js?v=3.5.1"></script>
+<script src="js/app.js?v=3.5.1"></script>
+<script src="js/firma.js?v=3.5.1"></script>
+<script src="js/docs.js?v=3.5.1"></script>
+<script src="js/evento.js?v=3.5.1"></script>
+<script src="js/guia.js?v=3.5.1"></script>
+<script src="js/historico.js?v=3.5.1"></script>
+<script src="js/tablero.js?v=3.5.1"></script>
 <script>App.init();</script>
 </body>
 </html>
