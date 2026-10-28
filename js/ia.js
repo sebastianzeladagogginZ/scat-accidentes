@@ -30,6 +30,19 @@ var IA = {
     if (IA.pipe) return Promise.resolve(IA.pipe);
     if (IA.cargando) return IA.cargando;
     var m = IA.MODELOS[IA.conf().modelo], archivos = {};
+    // Durante la carga: reintenta las descargas que se cortan (wifi inestable) y recuerda qué archivo falló, para informarlo.
+    var fetchOriginal = window.fetch, restaurar = function () { window.fetch = fetchOriginal; };
+    window.fetch = function (u, o) {
+      var url = String(u && u.url || u), intento = 0;
+      var corto = url.replace(/^https?:\/\//, "").split("?")[0].replace(/\/resolve\/main\//, "/…/").slice(0, 90);
+      return (function prueba() {
+        return fetchOriginal(u, o).catch(function (e) {
+          if (++intento < 4) return new Promise(function (r) { setTimeout(r, 1500 * intento); }).then(prueba);
+          var err = new Error("No se pudo descargar «" + corto + "» tras 4 intentos (" + (e && e.message || e) + "). Revisa tu conexión o si un bloqueador o el filtro de la red bloquea huggingface.co / hf.co.");
+          err.archivo = url; throw err;
+        });
+      })();
+    };
     IA.cargando = import(IA.LIB).then(function (T) {
       IA.T = T; T.env.allowLocalModels = false;
       return T.pipeline("text-generation", m.id, { dtype: "q4f16", device: "webgpu",
@@ -37,8 +50,8 @@ var IA = {
           if (p.status === "progress" && p.total) { archivos[p.file] = [p.loaded || 0, p.total]; var a = 0, b = 0; for (var f in archivos) { a += archivos[f][0]; b += archivos[f][1]; } onProg && onProg(Math.round(a / b * 100), b); }
           if (p.status === "ready") onProg && onProg(100, 0);
         } });
-    }).then(function (pipe) { IA.pipe = pipe; IA.cargando = null; return pipe; })
-      .catch(function (e) { IA.cargando = null; throw e; });
+    }).then(function (pipe) { restaurar(); IA.pipe = pipe; IA.cargando = null; return pipe; })
+      .catch(function (e) { restaurar(); IA.cargando = null; console.error("[IA] carga del modelo:", e); throw e; });
     return IA.cargando;
   },
   /* Genera con streaming; devuelve el texto final sin el bloque de «pensamiento». */
@@ -83,7 +96,7 @@ var IA = {
       prog: function (p, total) { var w = $("#iaBarW", m.el); if (!w) return; w.hidden = p >= 100; $("#iaBar", m.el).style.width = p + "%"; $("#iaEstT", m.el).textContent = p >= 100 ? "Pensando…" : "Descargando el modelo (solo la primera vez): " + p + "%" + (total ? " de " + fmt(total / 1e9, 1) + " GB" : ""); },
       texto: function (t) { var o = $("#iaOut", m.el); if (!o) return; o.hidden = false; o.textContent = t; $("#iaEstT", m.el).textContent = "Escribiendo…"; },
       fin: function (r) { var e = $("#iaEst", m.el); if (!e) return; e.innerHTML = "✓ Listo en " + fmt(r.segundos, 1) + " s · " + fmt(r.tps, 1) + " palabras/s aprox."; $("#iaNota", m.el).hidden = false; $("[data-ok]", m.el).disabled = false; },
-      error: function (err) { var e = $("#iaEst", m.el); if (e) e.innerHTML = '<span class="t-bad">No se pudo usar el asistente en este equipo.</span> <span class="small muted">' + esc(String(err && err.message || err).slice(0, 180)) + '</span>'; }
+      error: function (err) { var e = $("#iaEst", m.el); if (e) e.innerHTML = '<span class="t-bad">No se pudo usar el asistente en este equipo.</span> <span class="small muted">' + esc(String(err && err.message || err).slice(0, 420)) + '</span>'; }
     };
   },
 
