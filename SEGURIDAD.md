@@ -45,6 +45,17 @@ A pedido de SSOMA, el ingreso es **solo con el número de documento registrado**
 
 **Recomendación:** si en el futuro se requiere más protección para los perfiles con datos médicos, se puede volver a exigir una clave solo a ADMIN, SST y MÉDICO, sin cambiar el ingreso del resto.
 
+## Revisión v3.0 (28/10/2026): navegación, buscador y pendientes
+
+Se revisó el código nuevo de navegación (`js/guia.js`) con estas comprobaciones:
+
+- **Enlaces manipulados:** se probaron direcciones con código HTML/JavaScript en el código del evento (`#/evento/<script>…`, `<img onerror>`, `<svg onload>`) y con caracteres inválidos. No se ejecutó nada: se muestran como texto y la app responde "Evento no encontrado".
+- **Botones generados:** ningún dato del usuario se inserta dentro de código `onclick`; los botones usan atributos `data-` escapados.
+- **"Retoma donde te quedaste" (Ley 29733):** en el navegador solo se guarda el código del evento y la pestaña, **nunca nombres de trabajadores**. El texto se arma con los datos que el usuario tiene permiso de ver; si pierde el acceso, el elemento desaparece. La clave de almacenamiento usa una huella del documento, no el DNI en claro, y se borran las claves de formato anterior.
+- **Mis pendientes y buscador:** trabajan solo con los datos que el servidor ya entregó al usuario según su rol y área; no piden información adicional al backend.
+- **Modo demostración local (`?demo`):** solo funciona en `localhost`; en la versión publicada no tiene efecto.
+- **Sin dependencias nuevas:** no se agregaron librerías ni conexiones externas; la política de contenido (CSP) no cambia.
+
 ## Riesgos aceptados y mitigación
 
 1. **El web app tiene acceso "Cualquier usuario".** Es necesario para que la app de GitHub se conecte. La dirección responde a cualquiera, pero **no entrega datos sin iniciar sesión**; se probó que devuelve `sesion_invalida` y `credenciales`.

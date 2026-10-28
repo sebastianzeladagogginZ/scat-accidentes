@@ -300,13 +300,14 @@ var App = {
     $("#loginForm").onsubmit = function (e) { e.preventDefault(); App.login(); };
     $("#lgDni").addEventListener("input", function () { App.revisarDni(); });
     try { localStorage.removeItem("scat_equipos"); } catch (e) {}                         // formato anterior (v2.2)
-    window.addEventListener("hashchange", App.route);
+    try { Object.keys(localStorage).forEach(function (k) { if (/^scat_(vistos|tour)_\d+$/.test(k)) localStorage.removeItem(k); }); } catch (e) {}   // claves con DNI en claro
+    window.addEventListener("hashchange", App.navegar);
     API.areasPanel().then(function (fuente) { S.fuenteAreas = fuente; });
     var t = null; try { t = sessionStorage.getItem("scat_tk"); } catch (e) {}
     if (t) { API.token = t; App.cargar().then(function (ok) { if (!ok) App.mostrarLogin(); }); } else App.mostrarLogin();
     if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(function () {});
   },
-  mostrarLogin: function () { $("#login").hidden = false; $("#app").hidden = true; App.pintarRecordados(); App.revisarDni(); setTimeout(function () { $("#lgDni").focus(); }, 50); },
+  mostrarLogin: function () { $("#login").hidden = false; $("#app").hidden = true; CARATULAS.iniciar(); App.pintarRecordados(); App.revisarDni(); setTimeout(function () { $("#lgDni").focus(); }, 50); },
   /* Ingreso solo con el documento registrado: detecta DNI / CE y reconoce perfiles usados en este equipo. */
   revisarDni: function () {
     var inp = $("#lgDni"); inp.value = inp.value.replace(/\D/g, "").slice(0, 12);
@@ -369,31 +370,70 @@ var App = {
   nav: function () {
     var al = L.alertas(), r = L.rol();
     var abiertas = S.eventos.filter(function (e) { return ["Reportado","En investigación","Observado","En revisión"].indexOf(e.estado) >= 0; }).length;
-    var mias = S.acciones.filter(function (a) { return a.responsable_dni === S.user.dni && a.estado !== "Cerrada"; }).length;
-    var items = [
-      { g: "General" }, { k: "tablero", t: "Tablero" }, { k: "alertas", t: "Alertas y plazos", c: al.filter(function (a) { return a.sev >= 2; }).length },
-      { g: "Gestión de eventos" }, { k: "reportar", t: "Reportar evento", hide: r === "COMITE", hi: 1 }, { k: "eventos", t: "Registro de eventos" },
-      { k: "investigaciones", t: "Investigaciones", c: abiertas, cb: 1 }, { k: "descansos", t: "Descansos médicos", hide: r === "REPORTANTE" },
-      { k: "acciones", t: "Plan de acción", c: mias, cb: 1 }, { k: "indicadores", t: "Indicadores IF · IS · IA", hide: r === "REPORTANTE" },
-      { g: "Control" }, { k: "auditoria", t: "Trazabilidad", hide: !L.es("ADMIN","SST") }, { k: "usuarios", t: "Usuarios y accesos", hide: r !== "ADMIN" }, { k: "cuenta", t: "Mi cuenta" }
-    ];
-    var cur = (location.hash.split("/")[1] || "tablero"); if (cur === "evento") cur = "eventos";
-    $("#nav").innerHTML = items.filter(function (x) { return !x.hide; }).map(function (x) {
-      if (x.g) return '<div class="nav-g">' + x.g + '</div>';
-      return '<a class="nav-item ' + (cur === x.k ? "active " : "") + (x.hi ? "hi" : "") + '" href="#/' + x.k + '">' + svg(x.k) + '<span>' + x.t + '</span>' + (x.c ? '<span class="cnt ' + (x.cb ? "b" : "") + '">' + x.c + '</span>' : "") + '</a>';
+    var mias = S.acciones.filter(function (a) { return a.responsable_dni === S.user.dni && a.estado !== "Cerrada"; }).length, pend = PEND.lista();
+    var urg = pend.filter(function (x) { return x.sev >= 3; }).length;
+    // Menú corto según el rol: cada persona ve primero lo que usa en su trabajo diario.
+    var it = {
+      inicio: { k: "inicio", t: "Mis pendientes", c: pend.length, cb: !urg, d: "Lo que te toca hacer" },
+      reportar: { k: "reportar", t: "Reportar evento", hi: 1, d: "Registrar un accidente o incidente" },
+      eventos: { k: "eventos", t: NAV.etiqueta("eventos"), d: "Todos los expedientes" },
+      investigaciones: { k: "investigaciones", t: "Investigaciones", c: abiertas, cb: 1, d: "Casos abiertos y su avance" },
+      descansos: { k: "descansos", t: "Descansos médicos", d: "Certificados y días perdidos" },
+      acciones: { k: "acciones", t: r === "JEFE" || r === "REPORTANTE" ? "Mis acciones" : "Plan de acción", c: mias, cb: 1, d: "Medidas correctivas y preventivas" },
+      tablero: { k: "tablero", t: "Tablero gerencial", d: "Resumen e indicadores del año" },
+      indicadores: { k: "indicadores", t: "Indicadores IF · IS · IA", d: "Índices mensuales y HHT" },
+      alertas: { k: "alertas", t: "Alertas y plazos", c: al.filter(function (a) { return a.sev >= 2; }).length, d: "Lo que vence o ya venció" },
+      auditoria: { k: "auditoria", t: "Trazabilidad", d: "Quién hizo qué y cuándo" },
+      usuarios: { k: "usuarios", t: "Usuarios y accesos", d: "Personas, roles y áreas" },
+      cuenta: { k: "cuenta", t: "Mi cuenta", d: "Tus datos" }
+    };
+    var M = {
+      ADMIN: [["", "inicio", "reportar"], ["Casos", "eventos", "investigaciones", "descansos", "acciones"], ["Análisis", "tablero", "indicadores", "alertas"], ["Control", "auditoria", "usuarios", "cuenta"]],
+      SST: [["", "inicio", "reportar"], ["Casos", "eventos", "investigaciones", "descansos", "acciones"], ["Análisis", "tablero", "indicadores", "alertas"], ["Control", "auditoria", "cuenta"]],
+      MEDICO: [["", "inicio", "reportar"], ["Área médica", "descansos", "eventos", "investigaciones"], ["Análisis", "tablero", "indicadores"], ["", "cuenta"]],
+      JEFE: [["", "inicio", "reportar"], ["Mi área", "eventos", "investigaciones", "acciones", "descansos"], ["Análisis", "tablero", "alertas"], ["", "cuenta"]],
+      COMITE: [["", "inicio"], ["Casos", "eventos", "investigaciones", "acciones"], ["Análisis", "tablero", "indicadores", "alertas"], ["", "cuenta"]],
+      REPORTANTE: [["", "inicio", "reportar"], ["", "eventos", "acciones"], ["", "cuenta"]]
+    }[r] || [["", "inicio"], ["", "eventos"], ["", "cuenta"]];
+    var cur = (location.hash.split("/")[1] || "inicio"); if (cur === "evento") cur = NAV.origen;
+    $("#nav").innerHTML = M.map(function (g) {
+      return (g[0] ? '<div class="nav-g">' + g[0] + '</div>' : '<div class="nav-gap"></div>') + g.slice(1).map(function (k) {
+        var x = it[k];
+        return '<a class="nav-item ' + (cur === x.k ? "active " : "") + (x.hi ? "hi" : "") + '" href="#/' + x.k + '" title="' + esc(x.d) + '">' + svg(x.k) + '<span>' + x.t + '</span>' + (x.c ? '<span class="cnt ' + (x.cb ? "b" : "") + '">' + x.c + '</span>' : "") + '</a>';
+      }).join("");
     }).join("");
+    $("#bbPend").textContent = pend.length || ""; $("#bbPend").hidden = !pend.length;
+    $("#bbRep").hidden = r === "COMITE";
   },
   titulo: function (t, s, acciones) { $("#pgTitle").textContent = t; $("#pgSub").textContent = s || ""; $("#pgActions").innerHTML = acciones || ""; document.title = t + " · SCAT Optical Networks"; },
+  /* Cambio de pantalla con transición suave (View Transitions) cuando el navegador la soporta. */
+  navegar: function (e) {
+    // Entre pestañas del mismo evento no se anima la página: solo aparece suave el contenido de la pestaña.
+    var mismo = function (u) { var m = String(u || "").match(/#\/evento\/([^/]+)/); return m ? m[1] : null; };
+    if (e && e.oldURL && mismo(e.oldURL) && mismo(e.oldURL) === mismo(e.newURL)) { var y = window.scrollY; App._vt = true; App.route(); App._vt = false; window.scrollTo(0, Math.min(y, ($(".tabs") || {}).offsetTop || 0)); return; }
+    var vt = document.startViewTransition && !document.hidden && !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) && !$(".modal-bg") && !$(".cmdk-bg");
+    if (vt) { App._vt = true; document.startViewTransition(function () { App.route(); }).finished.then(function () { App._vt = false; }, function () { App._vt = false; }); }
+    else App.route();
+  },
   route: function () {
     if (!S.user) return;
     charts.forEach(function (c) { c.destroy(); }); charts = [];
     $("#side").classList.remove("open"); $("#scrim").hidden = true;
-    var p = location.hash.replace(/^#\//, "").split("/"), v = p[0] || "tablero";
+    var p = location.hash.replace(/^#\//, "").split("/").map(function (x) { try { return decodeURIComponent(x); } catch (e) { return ""; } }), v = Views[p[0]] || p[0] === "evento" ? p[0] : "inicio";
+    p[0] = v;
+    if (v !== "evento") NAV.recordar(p);                 // fija el origen antes de pintar el menú
     App.nav();
-    var vw = $("#view"); vw.classList.remove("fade"); void vw.offsetWidth; vw.classList.add("fade");
-    if (v === "evento") return EV.render(decodeURIComponent(p[1]), p[2] || "resumen");
-    (Views[v] || Views.tablero)(p);
-    window.scrollTo(0, 0);
+    var vw = $("#view"); vw.classList.remove("fade"); if (!App._vt) { void vw.offsetWidth; vw.classList.add("fade"); }
+    if (v === "evento") { EV.render(p[1], p[2] || "resumen"); NAV.recordar(p); }
+    else {
+      Views[v](p);
+      // Enlaces directos a un registro (desde Mis pendientes o el buscador): abre su ficha y deja la URL de la lista.
+      if (p[1] && v === "descansos" && S.descansos.some(function (d) { return d.id === p[1]; })) { DM.editar(p[1]); history.replaceState(null, "", "#/descansos"); }
+      if (p[1] && v === "acciones" && S.acciones.some(function (a) { return a.id === p[1]; })) { ACC.editar(p[1]); history.replaceState(null, "", "#/acciones"); }
+      window.scrollTo(0, 0);
+    }
+    NAV.barra(p);
+    if (TOUR.pendiente() && !$(".modal-bg")) setTimeout(TOUR.abrir, 400);
   }
 };
 
@@ -888,7 +928,7 @@ function exportarInd() {
 
 /* ---------- TRAZABILIDAD ---------- */
 Views.auditoria = function () {
-  if (!L.es("ADMIN","SST")) { location.hash = "#/tablero"; return; }
+  if (!L.es("ADMIN","SST")) { location.hash = "#/inicio"; return; }
   App.titulo("Trazabilidad", "Bitácora inmutable: quién hizo qué, cuándo y qué cambió", '<button class="btn" onclick="exportarAud()">⬇ Exportar</button>');
   $("#view").innerHTML = '<div class="toolbar"><input type="search" id="audQ" placeholder="Buscar usuario, registro, detalle…" oninput="pintarAudD()"><select id="audA" onchange="pintarAud()"><option value="">Acción: todas</option></select><select id="audE" onchange="pintarAud()"><option value="">Entidad: todas</option></select></div><div id="audList"><div class="empty"><div class="spin" style="margin:auto"></div></div></div>';
   API.call("auditoria", {}).then(function (r) {
@@ -916,7 +956,7 @@ function exportarAud() { var r = [["Fecha","DNI","Usuario","Rol","Acción","Enti
 
 /* ---------- USUARIOS ---------- */
 Views.usuarios = function () {
-  if (L.rol() !== "ADMIN") { location.hash = "#/tablero"; return; }
+  if (L.rol() !== "ADMIN") { location.hash = "#/inicio"; return; }
   App.titulo("Usuarios y accesos", "Quién puede ingresar (con su DNI / CE), con qué rol y en qué áreas ▸ divisiones", '<button class="btn primary" onclick="USR.editar()">＋ Nuevo usuario</button>');
   $("#view").innerHTML = '<div class="card mb"><h3>Roles del sistema</h3><div class="grid g3">' + Object.keys(CAT.roles).map(function (k) { return '<div class="role-c"><span class="pill info">' + k + '</span> <b>' + CAT.roles[k].t + '</b><div class="small muted">' + CAT.roles[k].desc + '</div></div>'; }).join("") + '</div>' +
     '<p class="small muted mt">Áreas y divisiones sincronizadas con el Panel SSOMA (' + ({ panel: "en línea", cache: "copia local", respaldo: "respaldo interno" }[S.fuenteAreas] || "…") + ') · ' + CAT.divisiones.length + ' divisiones.</p></div><div id="usrList"><div class="empty"><div class="spin" style="margin:auto"></div></div></div>';

@@ -10,20 +10,19 @@ var EV = {
     if (EV.id !== id) { EV.draft = null; DOCS.cargarFirmas(id); }
     EV.id = id; EV.tab = tab;
     var pg = L.pasos(ev), acc = L.accionesDe(id), dm = L.dmDe(id), s = ev.scat || {}, rg = CAT.riesgo(s.gravedad, s.probabilidad, s.exposicion), t = CAT.get("tipoEvento", ev.tipo) || {};
-    App.titulo(ev.id + " · " + CAT.tipoTxt(ev.tipo), ev.area + " · " + fFecha(ev.fecha) + " " + (ev.hora || ""), '<a class="btn" href="#/eventos">← <span class="hide-sm">Registro</span></a><a class="btn primary" href="#/evento/' + id + '/formatos">🖊 <span class="hide-sm">Formatos PDF</span></a>');
-    var flujo = ["Reportado","En investigación","En revisión","Aprobado","Cerrado"], iCur = flujo.indexOf(ev.estado === "Observado" ? "En investigación" : ev.estado);
+    App.titulo(ev.id + " · " + CAT.tipoTxt(ev.tipo), CAT.divDe(ev.area) + " · " + fFecha(ev.fecha) + " " + (ev.hora || ""), '<a class="btn" href="#/evento/' + id + '/formatos">🖊 <span class="hide-sm">Formatos PDF</span></a>');
     var h = '<div class="ev-hero" style="--c:' + (t.color || "#0284c7") + '"><div class="evh-main"><div class="evh-id">' + esc(ev.id) + ' · ' + areaChip(ev.area) + '</div><h2>' + esc(ev.descripcion) + '</h2>' +
       '<div class="meta">' + L.tipoPill(ev.tipo) + L.estadoPill(ev.estado) + (rg ? '<span class="pill ' + rg.color + '">Riesgo ' + rg.nivel + '</span>' : "") +
-      '<span>👷 ' + esc(ev.trabajador || "sin trabajador") + '</span><span>📍 ' + esc(ev.lugar || ev.ambito || "—") + '</span><span>🩺 ' + L.diasPerdidos(id) + ' días perdidos</span></div>' +
-      (ev.estado === "Anulado" ? "" : '<div class="flow">' + flujo.map(function (f, i) { return '<span class="' + (i < iCur ? "done" : i === iCur ? "cur" : "") + '">' + (i < iCur ? "✓ " : "") + f + '</span>'; }).join("") + '</div>') + '</div>' +
-      '<div class="evh-side"><div class="ring" style="--p:' + pg.pct + '"><span>' + pg.pct + '%</span></div><div><div class="small muted">Avance del proceso</div>' +
-      (pg.siguiente && ev.estado !== "Anulado" ? '<a class="next-step" href="#/evento/' + id + '/' + pg.siguiente.tab + '">Siguiente: <b>' + esc(pg.siguiente.t) + '</b> →</a>' : '<b class="ok-t">Proceso completo</b>') + '</div></div>' +
-      '<div class="evh-actions">' + EV.botonesFlujo(ev) + '</div></div>';
-    var nForm = DOCS.lista(ev).filter(function (d) { return d.disponible; }), nFirm = nForm.filter(function (d) { return (ev.adjuntos || []).some(function (a) { return a.doc === d.key; }); }).length;
+      '<span>👷 ' + esc(ev.trabajador || "sin trabajador") + '</span><span>📍 ' + esc(ev.lugar || ev.ambito || "—") + '</span><span>🩺 ' + L.diasPerdidos(id) + ' días perdidos</span></div></div>' +
+      (EV.botonesFlujo(ev) ? '<div class="evh-actions">' + EV.botonesFlujo(ev) + '</div>' : "") + '</div>' + GUIA.html(ev);
+    var nForm = DOCS.lista(ev).filter(function (d) { return d.disponible; }), nFirm = nForm.filter(function (d) { return (ev.adjuntos || []).some(function (a) { return a.doc === d.key; }); }).length, te = GUIA.tabsEstado(ev);
     var tabs = [["resumen","Resumen"],["respuesta","Respuesta inicial"],["evidencias","Evidencias y declaraciones",(ev.adjuntos || []).filter(function (a) { return !a.doc; }).length + (ev.declaraciones || []).length],
-      ["scat","Análisis SCAT", pg.pasos.filter(function (p) { return /^scat/.test(p.k) && p.ok; }).length + "/5"],["acciones","Plan de acción",acc.length],["descansos","Descansos médicos",dm.length],
+      ["descansos","Descansos médicos",dm.length],["scat","Análisis SCAT", pg.pasos.filter(function (p) { return /^scat/.test(p.k) && p.ok; }).length + "/5"],["acciones","Plan de acción",acc.length],
       ["formatos","Formatos y firmas", nFirm + "/" + nForm.length],["informe","Informe y difusión"],["historial","Historial",(ev.comentarios || []).length || ""]];
-    h += '<div class="tabs" role="tablist">' + tabs.map(function (x) { return '<button class="tab ' + (x[0] === tab ? "active" : "") + '" role="tab" onclick="location.hash=\'#/evento/' + id + '/' + x[0] + '\'">' + x[1] + (x[2] !== undefined && x[2] !== "" ? ' <span class="tb">' + x[2] + '</span>' : "") + '</button>'; }).join("") + '</div><div id="tabBody" class="fade"></div>';
+    h += '<div class="tabs" role="tablist">' + tabs.map(function (x) {
+      var e = te[x[0]] || {}, mk = x[0] === "resumen" || x[0] === "historial" ? "" : e.next ? '<i class="t-next" title="Aquí está lo que sigue"></i>' : e.ok ? '<i class="t-ok" title="Completo">✓</i>' : "";
+      return '<button class="tab ' + (x[0] === tab ? "active" : "") + '" role="tab" onclick="location.hash=\'#/evento/' + id + '/' + x[0] + '\'">' + mk + x[1] + (x[2] !== undefined && x[2] !== "" ? ' <span class="tb">' + x[2] + '</span>' : "") + '</button>';
+    }).join("") + '</div><div id="tabBody" class="fade"></div>';
     $("#view").innerHTML = h;
     if (tab === "formatos") return DOCS.tab(ev);
     (EV.tabs[tab] || EV.tabs.resumen)(ev);
