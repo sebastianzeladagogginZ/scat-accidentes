@@ -6,7 +6,7 @@
    Todo lo que genera es un BORRADOR que la persona revisa.
    ============================================================ */
 var IA = {
-  LIB: "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2/dist/transformers.web.js",   // versión fija
+  LIB: "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2/dist/transformers.min.js",   // versión fija, con onnxruntime incluido (sin dependencias sueltas)
   MODELOS: {
     "2b": { id: "onnx-community/Qwen3.5-2B-ONNX", t: "Qwen3.5-2B (recomendado)", peso: "1,4 GB" },
     "08b": { id: "onnx-community/Qwen3.5-0.8B-ONNX", t: "Qwen3.5-0.8B (liviano, para equipos modestos)", peso: "0,6 GB" }
