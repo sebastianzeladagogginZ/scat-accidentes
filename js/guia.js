@@ -208,6 +208,18 @@ var PEND = {
     });
     return out.sort(function (a, b) { return b.sev - a.sev; });
   },
+  /* Accesos rápidos según el rol, para que el inicio nunca quede vacío. */
+  accesos: function () {
+    var r = L.rol(), q = [];
+    if (r !== "COMITE") q.push(["reportar", "Reportar evento", "Registra un accidente o incidente", "o"]);
+    q.push(["eventos", NAV.etiqueta("eventos"), "Consulta los expedientes"]);
+    if (r !== "REPORTANTE") q.push(["investigaciones", "Investigaciones", "Casos abiertos y su avance"]);
+    if (L.es("ADMIN","SST","MEDICO","JEFE")) q.push(["descansos", "Descansos médicos", "Certificados y días perdidos"]);
+    q.push(["acciones", r === "JEFE" || r === "REPORTANTE" ? "Mis acciones" : "Plan de acción", "Medidas y sus plazos"]);
+    if (r !== "REPORTANTE") q.push(["tablero", "Tablero gerencial", "Indicadores del año"]);
+    return '<div class="sub-h mt">Accesos rápidos</div><div class="qa">' + q.map(function (x) { return '<a href="#/' + x[0] + '" class="' + (x[3] || "") + '"><i>' + svg(x[0]) + '</i><b>' + esc(x[1]) + '</b><span>' + esc(x[2]) + '</span></a>'; }).join("") +
+      '<button type="button" onclick="BUSCAR.abrir()"><i>' + svg("buscar") + '</i><b>Buscar un caso</b><span>Por código, apellido o DNI</span></button></div>';
+  },
   fila: function (x) {
     return '<a class="tarea s' + x.sev + '" href="' + esc(x.h) + '"><span class="ta-ic ' + x.c + '">' + svg(x.ic) + '</span><span class="ta-tx"><b>' + esc(x.t) + '</b><span>' + esc(x.d) + '</span></span>' +
       (x.due ? '<span class="pill ' + (x.dueC || "") + ' ta-due">' + esc(x.due) + '</span>' : "") + '<span class="btn sm ' + (x.sev >= 2 ? "primary" : "") + ' ta-cta">' + esc(x.cta) + '</span></a>';
@@ -230,7 +242,7 @@ Views.inicio = function () {
   var tareas = pend.length ? grupos.map(function (g) {
     var l = pend.filter(function (x) { return x.sev === g[0]; }); if (!l.length) return "";
     return '<div class="tg"><div class="tg-h"><span class="dotc ' + g[2] + '"></span>' + g[1] + '<small>' + l.length + '</small></div>' + l.slice(0, 12).map(PEND.fila).join("") + (l.length > 12 ? '<div class="small muted" style="padding:6px 4px">… y ' + (l.length - 12) + ' más</div>' : "") + '</div>';
-  }).join("") : '<div class="al-dia"><div class="ad-ic">' + svg("check") + '</div><b>Todo al día</b><span>Cuando te asignen una firma, una acción o una investigación, aparecerá aquí con un botón para hacerla.</span></div>';
+  }).join("") : '<div class="al-dia sm"><div class="ad-ic">' + svg("check") + '</div><b>Todo al día</b><span>Cuando te asignen una firma, una acción o una investigación, aparecerá aquí con un botón para hacerla.</span></div>' + PEND.accesos();
 
   var vis = NAV.vistos().slice(0, 6);
   var retoma = '<div class="card"><h3>Retoma donde te quedaste</h3>' + (vis.length ? vis.map(function (x) {
