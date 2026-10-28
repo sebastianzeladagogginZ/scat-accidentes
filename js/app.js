@@ -335,7 +335,8 @@ var App = {
       $("#login").hidden = true; $("#app").hidden = false;
       $("#uNom").textContent = S.user.nombre; $("#uRol").textContent = S.user.cargo || (CAT.roles[S.user.rol] || {}).t || S.user.rol; $("#uAv").textContent = iniciales(S.user.nombre);
       TEMA.aplicar(); App.route(); AVISOS.iniciar();
-      HIST.servidorListo().then(function (ok) { S.srv24 = ok; });     // los campos clínicos nuevos solo se muestran si el servidor ya los protege
+      HIST.servidorListo().then(function (ok) { S.srv24 = ok; });
+      IA.revisar().then(function () { IA.adornar($("#view")); });      // ¿el equipo puede usar el asistente IA local?     // los campos clínicos nuevos solo se muestran si el servidor ya los protege
       return true;
     });
   },
@@ -424,7 +425,7 @@ var App = {
       if (p[1] && v === "acciones" && S.acciones.some(function (a) { return a.id === p[1]; })) { ACC.editar(p[1]); history.replaceState(null, "", "#/acciones"); }
       window.scrollTo(0, 0);
     }
-    NAV.barra(p); if (PRES.activo) PRES.marcar(v); AVISOS.titulo();
+    NAV.barra(p); if (PRES.activo) PRES.marcar(v); AVISOS.titulo(); IA.adornar($("#view"));
     if (TOUR.pendiente() && !$(".modal-bg")) setTimeout(TOUR.abrir, 400);
   }
 };
@@ -936,5 +937,5 @@ Views.cuenta = function () {
     '<label class="pref"><span><b>Modo oscuro</b><small>Más cómodo de noche o en sala con poca luz. Los PDF siguen saliendo en blanco.</small></span><input type="checkbox" class="sw" ' + (TEMA.actual() === "oscuro" ? "checked" : "") + ' onchange="TEMA.alternar()"></label>' +
     '<label class="pref"><span><b>Sonido de aviso</b><small>Dos notas suaves cuando llega una tarea nueva a «Mis pendientes».</small></span><input type="checkbox" class="sw" ' + (AVISOS.conf().sonido ? "checked" : "") + ' onchange="AVISOS.guardar(\'sonido\',this.checked);if(this.checked)AVISOS.sonar()"></label>' +
     '<label class="pref"><span><b>Vibración</b><small>En celulares Android, el teléfono vibra al llegar una tarea nueva.</small></span><input type="checkbox" class="sw" ' + (AVISOS.conf().vibrar ? "checked" : "") + ' onchange="AVISOS.guardar(\'vibrar\',this.checked)"></label>' +
-    '<p class="small muted mt">La app revisa si hay tareas nuevas cada 5 minutos mientras está abierta.</p></div>';
+    '<p class="small muted mt">La app revisa si hay tareas nuevas cada 5 minutos mientras está abierta.</p></div>' + IA.panel();
 };

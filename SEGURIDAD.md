@@ -80,6 +80,15 @@ Se revisó el código nuevo de navegación (`js/guia.js`) con estas comprobacion
 - Queda constancia en la trazabilidad (`eliminar`) de quién eliminó, cuándo, por qué y cuántos registros se borraron. La bitácora no se borra.
 - Es para registros de prueba o creados por error. Un evento real que no procede se **anula**: queda en el registro y no cuenta en los indicadores (la Ley 29783 exige conservar los registros).
 
+## Asistente IA local (v3.7 · aprobado por SSOMA el 28/10/2026, opción A)
+
+- **Qué hace:** ordena el relato del suceso y sugiere causas SCAT (solo códigos del catálogo). Usa el modelo Qwen3.5 (2B o 0.8B) **dentro del navegador** con WebGPU. Todo lo que genera es un borrador que la persona revisa y confirma.
+- **Privacidad (Ley 29733):** el relato y los datos del evento **no salen del equipo**. Al asistente no se le envían nombres. No se usa ninguna API en la nube.
+- **Cambio en la política de contenido (CSP):** se permite `cdn.jsdelivr.net` (librería Transformers.js, versión fija 4.3.2), `'wasm-unsafe-eval'` (el motor WebAssembly que ejecuta el modelo) y descargas desde `huggingface.co` / `*.hf.co` (archivos del modelo).
+  - *Riesgo aceptado:* la página confía en código de un tercero.
+  - *Mitigación:* versión fija, la librería solo se carga cuando la persona activa el asistente y acepta la descarga, y el resto de la CSP no cambia.
+- **Se puede desactivar** por equipo en «Mi cuenta». Si se quiere quitar por completo, basta con retirar `js/ia.js` y revertir esas tres entradas de la CSP.
+
 ## Riesgos aceptados y mitigación
 
 1. **El web app tiene acceso "Cualquier usuario".** Es necesario para que la app de GitHub se conecte. La dirección responde a cualquiera, pero **no entrega datos sin iniciar sesión**; se probó que devuelve `sesion_invalida` y `credenciales`.
