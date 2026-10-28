@@ -293,7 +293,7 @@ var App = {
     $("#loginForm").onsubmit = function (e) { e.preventDefault(); App.login(); };
     $("#lgDni").addEventListener("input", function () { App.revisarDni(); });
     try { localStorage.removeItem("scat_equipos"); } catch (e) {} RECIENTES.borrar();                         // formato anterior (v2.2)
-    try { Object.keys(localStorage).forEach(function (k) { if (/^scat_(vistos|tour)_\d+$/.test(k)) localStorage.removeItem(k); }); } catch (e) {}   // claves con DNI en claro
+    try { Object.keys(localStorage).forEach(function (k) { if (/^scat_(vistos|tour)_\d+$/.test(k) || /^scat_tour_[0-9A-F]{8}$/.test(k)) localStorage.removeItem(k); }); } catch (e) {}   // claves con DNI en claro
     window.addEventListener("hashchange", App.navegar);
     API.areasPanel().then(function (fuente) { S.fuenteAreas = fuente; });
     var t = null; try { t = sessionStorage.getItem("scat_tk"); } catch (e) {}

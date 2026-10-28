@@ -51,7 +51,33 @@ var EV = {
     if (ev.estado === "Aprobado" && L.es("ADMIN","SST")) btn("Cerrado", "🔒 Cerrar", "ok");
     if ((ev.estado === "Aprobado" || ev.estado === "Cerrado") && r === "ADMIN") btn("En investigación", "Reabrir", "", true);
     if (ev.estado !== "Anulado" && r === "ADMIN") btn("Anulado", "Anular", "danger", true);
+    if (r === "ADMIN") b.push('<button class="btn danger ghost" onclick="EV.eliminar()" title="Borrar por completo (solo registros de prueba o creados por error)">🗑 Eliminar</button>');
     return b.join("");
+  },
+  /* Eliminación definitiva: confirmación escribiendo el código y el motivo. */
+  eliminar: function () {
+    var ev = L.evento(EV.id); if (!ev) return;
+    var nA = L.accionesDe(ev.id).length, nD = L.dmDe(ev.id).length, nF = (S.firmasResumen[ev.id] || []).length, nAdj = (ev.adjuntos || []).length;
+    modal({ title: "Eliminar definitivamente " + ev.id, ok: "Eliminar para siempre",
+      body: '<div class="callout bad mb"><span>⚠</span><div><b>Esta acción no se puede deshacer.</b>Úsala solo para registros de prueba o creados por error. Para un evento real que no procede, usa <b>«Anular»</b>: queda en el registro y no cuenta en los indicadores (Ley 29783 exige conservar los registros).</div></div>' +
+        '<p style="margin:0 0 6px">Se borrará el evento <b>' + esc(ev.id) + '</b> (' + esc(CAT.tipoTxt(ev.tipo)) + ' del ' + fFecha(ev.fecha) + ') junto con:</p>' +
+        '<ul class="ayuda-l" style="margin-bottom:12px"><li>' + nA + ' acción(es) del plan</li><li>' + nD + ' descanso(s) médico(s) vinculados</li><li>' + nF + ' firma(s)</li><li>' + nAdj + ' archivo(s) adjunto(s), que pasan a la papelera de Drive (se recuperan durante 30 días)</li></ul>' +
+        '<div class="grid g2"><div class="f"><label>Motivo <span class="req">*</span></label><input id="elMot" placeholder="Ej.: registro de prueba de la capacitación"></div>' +
+        '<div class="f"><label>Escribe <b>' + esc(ev.id) + '</b> para confirmar <span class="req">*</span></label><input id="elCod" autocomplete="off" placeholder="' + esc(ev.id) + '"></div></div>' +
+        '<p class="small muted mt">Quedará constancia en la trazabilidad de quién lo eliminó, cuándo y por qué.</p>',
+      onOpen: function (m) { var ok = $("[data-ok]", m); ok.classList.remove("primary"); ok.classList.add("danger"); },
+      onOk: function (m) {
+        var mot = $("#elMot", m).value.trim(), cod = $("#elCod", m).value.trim().toUpperCase();
+        if (mot.length < 5) { toast("Escribe el motivo de la eliminación.", "bad"); return false; }
+        if (cod !== ev.id) { toast("El código no coincide. Escribe " + ev.id + ".", "bad"); return false; }
+        loading(true, "Eliminando…");
+        return API.call("eliminar", { id: ev.id, confirmacion: cod, motivo: mot }).then(function (r) {
+          loading(false);
+          if (!r.ok) { toast(r.msg || r.error, "bad"); return false; }
+          toast(ev.id + " eliminado definitivamente" + (r.archivos ? " · " + r.archivos + " archivo(s) en la papelera de Drive" : ""), "ok");
+          EV.id = null; location.hash = "#/eventos"; App.recargar();
+        });
+      } });
   },
   pedirTransicion: function (a, motivo) {
     var ev = L.evento(EV.id);

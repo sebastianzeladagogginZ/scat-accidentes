@@ -73,6 +73,13 @@ Se revisó el código nuevo de navegación (`js/guia.js`) con estas comprobacion
 - **Puesto real en las firmas:** el puesto de cada persona se guarda en «Usuarios» y aparece en los formatos firmados y bajo su nombre.
 - **El ingreso ya no recuerda a nadie:** la pantalla de ingreso no muestra ingresos anteriores y se borra lo que estaba guardado en cada equipo. Solo se escribe el número de documento.
 
+## Eliminación definitiva de registros (v3.6 · servidor 2.6)
+
+- Solo **SSOMA (ADMIN)** puede eliminar un evento, y debe escribir el código del evento y el motivo. El servidor vuelve a validar las tres condiciones.
+- Se borran el evento, sus acciones, sus descansos vinculados y sus firmas. Los archivos van a la **papelera de Drive**, donde se pueden recuperar durante 30 días.
+- Queda constancia en la trazabilidad (`eliminar`) de quién eliminó, cuándo, por qué y cuántos registros se borraron. La bitácora no se borra.
+- Es para registros de prueba o creados por error. Un evento real que no procede se **anula**: queda en el registro y no cuenta en los indicadores (la Ley 29783 exige conservar los registros).
+
 ## Riesgos aceptados y mitigación
 
 1. **El web app tiene acceso "Cualquier usuario".** Es necesario para que la app de GitHub se conecte. La dirección responde a cualquiera, pero **no entrega datos sin iniciar sesión**; se probó que devuelve `sesion_invalida` y `credenciales`.

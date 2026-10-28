@@ -15,7 +15,7 @@ var CONFIG = {
   META_IF: 5, META_IS: 100,  // metas anuales para los medidores del tablero
   SELFIE_PX: 260, FIRMA_W: 420, FIRMA_H: 150
 };
-var APP_VERSION = "V3.5.1";
+var APP_VERSION = "V3.6";
 // Solo en el equipo de desarrollo (localhost): ?demo usa los datos de ejemplo y nunca toca la base real.
 if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && /[?&]demo/.test(location.search)) CONFIG.ENDPOINT_URL = "";
 
@@ -214,6 +214,17 @@ var MOCK = (function () {
       if (ent === "acciones") autoCerrar(d.evento_id);
       save();
       return { ok: true, registro: ent === "descansos" ? filtrarMed(u, d) : cp(d) };
+    },
+    eliminar: function (b, u) {
+      if (u.rol !== "ADMIN") return { ok: false, msg: "Solo SSOMA puede eliminar registros." };
+      var ev = byId("eventos", b.id); if (!ev) return { ok: false, msg: "El evento ya no existe." };
+      if (String(b.confirmacion || "").trim().toUpperCase() !== ev.id) return { ok: false, msg: "Escribe el código del evento para confirmar." };
+      if (String(b.motivo || "").trim().length < 5) return { ok: false, msg: "Indica el motivo de la eliminación." };
+      var n = { acciones: db.acciones.filter(function (x) { return x.evento_id === ev.id; }).length, descansos: db.descansos.filter(function (x) { return x.evento_id === ev.id; }).length, firmas: db.firmas.filter(function (x) { return x.evento_id === ev.id; }).length };
+      db.acciones = db.acciones.filter(function (x) { return x.evento_id !== ev.id; }); db.descansos = db.descansos.filter(function (x) { return x.evento_id !== ev.id; });
+      db.firmas = db.firmas.filter(function (x) { return x.evento_id !== ev.id; }); db.eventos = db.eventos.filter(function (x) { return x.id !== ev.id; });
+      audit(u, "eliminar", "eventos", ev.id, "Eliminado definitivamente · motivo: " + b.motivo + " · " + n.acciones + " acción(es), " + n.descansos + " descanso(s), " + n.firmas + " firma(s)");
+      save(); return { ok: true, eliminados: n, archivos: 0 };
     },
     transicion: function (b, u) {
       var ev = byId("eventos", b.id); if (!ev) return { ok: false, msg: "No encontrado" };

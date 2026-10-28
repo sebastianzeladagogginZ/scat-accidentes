@@ -391,12 +391,17 @@ var TOUR = {
     ["volver", "Siempre sabes dónde estás", "Arriba ves la ruta (Inicio › Eventos › EV-2026-001) y el botón «Volver» te regresa a la lista de donde vienes."],
     ["investigaciones", "Cada evento te guía", "Una barra de 6 pasos muestra en qué va el caso y el recuadro «Lo que sigue» te dice qué falta, quién lo hace y el botón para hacerlo."]
   ],
-  _k: function () { return "scat_tour_" + (S.user ? FIRMA.huella(S.user.dni) : ""); },
-  pendiente: function () { try { return !localStorage.getItem(TOUR._k()); } catch (e) { return false; } },
+  // Se da por visto solo al completar los 4 pasos («Empezar»). Si se cierra o se salta, vuelve en el siguiente inicio de sesión.
+  _k: function () { return "scat_tour2_" + (S.user ? FIRMA.huella(S.user.dni) : ""); },
+  _ses: function () { return "scat_tour_ses"; },
+  pendiente: function () {
+    try { return !localStorage.getItem(TOUR._k()) && sessionStorage.getItem(TOUR._ses()) !== String(API.token); } catch (e) { return false; }
+  },
+  _vistoEnSesion: function () { try { sessionStorage.setItem(TOUR._ses(), String(API.token)); } catch (e) {} },
   abrir: function () {
     var i = 0, m = modal({ title: "Bienvenida al sistema SCAT", body: '<div id="tourB"></div>', footer: '<button class="btn" id="tourAnt">Anterior</button>', cancel: "Saltar", ok: "Siguiente", sticky: true,
-      onOk: function () { if (i < TOUR.pasos.length - 1) { i++; pintar(); return false; } try { localStorage.setItem(TOUR._k(), "1"); } catch (e) {} } });
-    $$("[data-x]", m.el).forEach(function (b) { b.addEventListener("click", function () { try { localStorage.setItem(TOUR._k(), "1"); } catch (e) {} }); });
+      onOk: function () { if (i < TOUR.pasos.length - 1) { i++; pintar(); return false; } try { localStorage.setItem(TOUR._k(), "1"); } catch (e) {} toast("¡Listo! Ya conoces lo esencial. Si lo necesitas, el botón «?» te ayuda en cada pantalla.", "ok"); } });
+    TOUR._vistoEnSesion();                                            // no se repite en esta sesión; sí en el próximo ingreso
     function pintar() {
       var p = TOUR.pasos[i];
       $("#tourB", m.el).innerHTML = '<div class="tour"><div class="tour-ic">' + svg(p[0]) + '</div><div class="tour-n">Paso ' + (i + 1) + ' de ' + TOUR.pasos.length + '</div><h4>' + esc(p[1]) + '</h4><p>' + esc(p[2]) + '</p>' +
