@@ -780,6 +780,70 @@ body.presenta .g-v{font-size:32px}
 /* Las firmas y el lienzo de firma siguen en blanco para que el trazo se vea */
 :root[data-theme="dark"] :is(.fb,.sig-box){background:#fff;color:#0f172a}
 
+/* ===== TABLERO GERENCIAL v3.3 ===== */
+.grid-dash>div{min-width:0;display:flex} .grid-dash>div>.card{flex:1;margin:0;min-width:0}
+.h-dato{font-size:12px;font-weight:700;color:var(--ink2);background:var(--nabg);border-radius:99px;padding:3px 10px}
+.h-nota{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:-6px 0 12px}
+.h-nota i{width:10px;height:10px;border-radius:3px;display:inline-block} .h-nota .sw-a{background:var(--rk1)} .h-nota .sw-b{background:var(--rk0);margin-left:8px}
+/* Ranking horizontal */
+.rk{--rk1:#2a78d6;display:grid;gap:4px}
+.rk.b2{--rk1:#2a78d6}.rk.b3{--rk1:#2a78d6}.rk.b4{--rk1:#eb6834}
+.card{--rk1:#2a78d6;--rk0:#b4bfcc}
+.rk-r{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,38%) 64px;gap:12px;align-items:center;padding:7px 8px;border-radius:10px;transition:background .2s}
+.rk-r:hover{background:var(--bg2)}
+.rk-l{min-width:0;font-size:13px;line-height:1.35}
+.rk-t{color:var(--ink)} .rk-l small{display:flex;gap:4px;color:var(--muted);font-size:11.5px;margin-top:2px}
+.rk-b{height:10px;border-radius:99px;background:var(--nabg);overflow:hidden}
+.rk-b i{display:block;height:100%;border-radius:99px;background:var(--rk1);animation:crece .9s var(--ease) both}
+@keyframes crece{from{width:0!important}}
+.rk-r.dim .rk-b i{background:var(--rk0)} .rk-r.dim .rk-t{color:var(--muted)}
+.rk-v{display:flex;align-items:baseline;justify-content:flex-end;gap:6px} .rk-v b{font-size:16px;font-weight:800} .rk-v span{font-size:11.5px;color:var(--muted)}
+.rk-mas{font-size:12px;color:var(--muted);padding:4px 8px}
+.psc-c{font-size:10.5px;font-weight:800;background:var(--nabg);color:var(--ink2);border-radius:6px;padding:0 6px}
+/* Lectura del año */
+.sec-t{display:flex;align-items:baseline;gap:10px;margin:2px 0 10px} .sec-t span{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--ink2)} .sec-t small{color:var(--muted);font-size:12px}
+.lect{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px}
+.lc{display:flex;gap:12px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:var(--sh);animation:rise .5s var(--ease) both}
+.lc:nth-child(2){animation-delay:.06s}.lc:nth-child(3){animation-delay:.12s}.lc:nth-child(4){animation-delay:.18s}
+.lc-ic{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--infobg);color:var(--info);flex:none} .lc-ic svg{width:18px;height:18px}
+.lc small{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.lc p{margin:3px 0 0;font-size:13.5px;line-height:1.45;color:var(--ink2)} .lc p b{color:var(--ink)}
+/* Índices pendientes por falta de HHT */
+.hero-g.sin{display:flex;align-items:stretch}
+.hero-hht{flex:1;display:flex;gap:16px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.28);border-radius:16px;padding:18px 20px}
+.hh-ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:rgba(251,191,36,.16);color:#fbbf24;flex:none} .hh-ic svg{width:22px;height:22px}
+.hero-hht b{display:block;font-size:17px;color:#fff} .hero-hht span{display:block;font-size:13px;color:#c7ddee;margin-top:4px;max-width:520px;line-height:1.5}
+.hero-nota{grid-column:1/-1;font-size:11.5px;color:#9cc3e0;text-align:right}
+.chart-box.xl{height:400px}
+/* Diapositivas (modo presentación) */
+.diapo{animation:fade .6s ease-out}
+.dp-h{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.dp-n{font-size:12px;font-weight:800;color:var(--on-d);background:#ffedd5;border-radius:99px;padding:4px 10px}
+.dp-h h2{margin:0;font-size:30px;letter-spacing:-.8px}
+.dp-c{display:flex;gap:6px} .dp-c button{width:42px;height:42px;border-radius:12px;border:1.5px solid var(--line2);background:var(--panel);color:var(--ink);font-size:20px;cursor:pointer;font-family:inherit}
+.dp-c button:hover{border-color:var(--brand2)}
+.dp-b{min-height:calc(100vh - 230px)}
+.dp-dots{display:flex;justify-content:center;gap:8px;margin-top:18px}
+.dp-dots button{width:46px;height:5px;border:none;padding:0;border-radius:99px;background:var(--line2);cursor:pointer;overflow:hidden}
+.dp-dots button i{display:block;height:100%;width:0;background:var(--navy);border-radius:99px}
+.dp-dots button.on i{width:100%;animation:prog linear both}
+body.presenta .lect{grid-template-columns:repeat(2,minmax(0,1fr))} body.presenta .lc{padding:20px 22px} body.presenta .lc p{font-size:17px} body.presenta .lc-ic{width:48px;height:48px}
+body.presenta .dp-b{min-height:calc(100vh - 230px);display:flex;flex-direction:column;gap:16px}
+body.presenta .dp-b>.grid-dash{flex:1;grid-auto-rows:1fr}
+body.presenta .dp-b>.lect{flex:1;margin:0;grid-template-columns:repeat(4,minmax(0,1fr))} body.presenta .dp-b>.lect .lc{flex-direction:column;align-items:flex-start}
+body.presenta .lc{align-items:center;gap:18px} body.presenta .lc p{font-size:19px;line-height:1.45} body.presenta .lc small{font-size:12.5px} body.presenta .lc-ic{width:58px;height:58px;border-radius:16px} body.presenta .lc-ic svg{width:26px;height:26px}
+body.presenta .chart-box.xl{height:calc(100vh - 400px);min-height:340px}
+body.presenta .pyr{max-height:calc(100vh - 380px)}
+body.presenta .hm-c{min-height:40px;font-size:14px} body.presenta .mx-c{min-height:70px} body.presenta .fun-r{font-size:15px;grid-template-columns:150px 1fr 36px} body.presenta .fun-b{height:20px}
+body.presenta .alert-row{padding:13px 10px} body.presenta .al-t b{font-size:15px}
+body.presenta .rk{gap:10px} body.presenta .rk-r{padding:12px 12px;grid-template-columns:minmax(0,1fr) minmax(120px,40%) 84px} body.presenta .rk-l{font-size:16px} body.presenta .rk-v b{font-size:20px} body.presenta .rk-b{height:14px}
+:root[data-theme="dark"] .card{--rk0:#4f5f75}
+:root[data-theme="dark"] .rk{--rk1:#3987e5} :root[data-theme="dark"] .rk.b4{--rk1:#d95926}
+:root[data-theme="dark"] .card{--rk1:#3987e5}
+:root[data-theme="dark"] .dp-n{background:rgba(242,140,40,.16);color:#fdba74}
+:root[data-theme="dark"] .dp-dots button i{background:#e7eef6}
+@media (max-width:900px){.rk-r{grid-template-columns:minmax(0,1fr) 70px 52px;gap:8px}.hero-hht{flex-direction:column}}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width:1200px){.ev-hero{grid-template-columns:1fr}.c4{grid-column:span 6}.c8{grid-column:span 12}.hero{grid-template-columns:1fr}.doc-grid{grid-template-columns:1fr}}
 @media (max-width:1000px){.ev4{grid-template-columns:repeat(2,minmax(0,1fr))}.cc{grid-template-columns:1fr}.cc-a{transform:rotate(90deg);justify-self:center}}
@@ -915,13 +979,14 @@ body.presenta .g-v{font-size:32px}
 <div id="toasts" aria-live="polite"></div>
 <div class="loading" id="loading" hidden><div class="load-box"><div class="spin"></div><span id="loadTxt"></span></div></div>
 
-<script src="js/catalogos.js?v=3.2.2"></script>
-<script src="js/api.js?v=3.2.2"></script>
-<script src="js/app.js?v=3.2.2"></script>
-<script src="js/firma.js?v=3.2.2"></script>
-<script src="js/docs.js?v=3.2.2"></script>
-<script src="js/evento.js?v=3.2.2"></script>
-<script src="js/guia.js?v=3.2.2"></script>
+<script src="js/catalogos.js?v=3.3"></script>
+<script src="js/api.js?v=3.3"></script>
+<script src="js/app.js?v=3.3"></script>
+<script src="js/firma.js?v=3.3"></script>
+<script src="js/docs.js?v=3.3"></script>
+<script src="js/evento.js?v=3.3"></script>
+<script src="js/guia.js?v=3.3"></script>
+<script src="js/tablero.js?v=3.3"></script>
 <script>App.init();</script>
 </body>
 </html>
