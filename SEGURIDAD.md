@@ -55,6 +55,8 @@ Se revisó el código nuevo de navegación (`js/guia.js`) con estas comprobacion
 - **Mis pendientes y buscador:** trabajan solo con los datos que el servidor ya entregó al usuario según su rol y área; no piden información adicional al backend.
 - **Modo demostración local (`?demo`):** solo funciona en `localhost`; en la versión publicada no tiene efecto.
 - **Sin dependencias nuevas:** no se agregaron librerías ni conexiones externas; la política de contenido (CSP) no cambia.
+- **Avisos de tareas nuevas (v3.2):** la app vuelve a pedir sus propios datos al servidor cada 5 minutos, con la misma sesión y los mismos permisos; no pausa ni interrumpe pantallas de edición. El sonido se genera en el propio navegador (sin archivos externos) y la vibración solo funciona en celulares que la permiten. Se pueden apagar en «Mi cuenta».
+- **Modo oscuro y presentación (v3.2):** solo cambian colores y tamaños en pantalla. Se comprobó que el PDF generado es idéntico píxel a píxel en modo claro y oscuro.
 
 ## Riesgos aceptados y mitigación
 

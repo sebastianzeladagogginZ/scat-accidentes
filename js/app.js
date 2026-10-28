@@ -307,7 +307,7 @@ var App = {
     if (t) { API.token = t; App.cargar().then(function (ok) { if (!ok) App.mostrarLogin(); }); } else App.mostrarLogin();
     if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(function () {});
   },
-  mostrarLogin: function () { $("#login").hidden = false; $("#app").hidden = true; CARATULAS.iniciar(); App.pintarRecordados(); App.revisarDni(); setTimeout(function () { $("#lgDni").focus(); }, 50); },
+  mostrarLogin: function () { $("#login").hidden = false; $("#app").hidden = true; TEMA.aplicar(false); if (PRES.activo) PRES.salir(); CARATULAS.iniciar(); App.pintarRecordados(); App.revisarDni(); setTimeout(function () { $("#lgDni").focus(); }, 50); },
   /* Ingreso solo con el documento registrado: detecta DNI / CE y reconoce perfiles usados en este equipo. */
   revisarDni: function () {
     var inp = $("#lgDni"); inp.value = inp.value.replace(/\D/g, "").slice(0, 12);
@@ -337,19 +337,18 @@ var App = {
   },
   logout: function () { API.call("logout"); API.token = null; try { sessionStorage.removeItem("scat_tk"); } catch (e) {} S.user = null; DOCS.cache = {}; location.hash = ""; App.mostrarLogin(); },
   cargar: function () {
-    loading(true, "Cargando información…");
+    ESQ.mostrar();
     return API.call("bootstrap").then(function (r) {
-      loading(false);
       if (!r.ok) {
         if (r.error === "sesion_invalida") { try { sessionStorage.removeItem("scat_tk"); } catch (e) {} App.mostrarLogin(); }
-        else toast(r.msg || r.error, "bad");
+        else { toast(r.msg || r.error, "bad"); $("#view").innerHTML = vacioHTML("alertas", "No se pudo cargar la información", "Revisa tu conexión a internet e inténtalo otra vez.", '<button class="btn primary mt" onclick="App.cargar()">Reintentar</button>'); }
         return false;
       }
       S.user = r.user; S.eventos = r.eventos; S.acciones = r.acciones; S.descansos = r.descansos; S.hht = r.hht; S.equipo = r.equipo; S.firmasResumen = r.firmasResumen || {};
       S.eventos.sort(function (a, b) { return (b.fecha + b.hora) < (a.fecha + a.hora) ? -1 : 1; });
       $("#login").hidden = true; $("#app").hidden = false;
       $("#uNom").textContent = S.user.nombre; $("#uRol").textContent = (CAT.roles[S.user.rol] || {}).t || S.user.rol; $("#uAv").textContent = iniciales(S.user.nombre);
-      App.route(); return true;
+      TEMA.aplicar(); App.route(); AVISOS.iniciar(); return true;
     });
   },
   recargar: function () { DOCS.cache = {}; return App.cargar(); },
@@ -432,7 +431,7 @@ var App = {
       if (p[1] && v === "acciones" && S.acciones.some(function (a) { return a.id === p[1]; })) { ACC.editar(p[1]); history.replaceState(null, "", "#/acciones"); }
       window.scrollTo(0, 0);
     }
-    NAV.barra(p);
+    NAV.barra(p); if (PRES.activo) PRES.marcar(v); AVISOS.titulo();
     if (TOUR.pendiente() && !$(".modal-bg")) setTimeout(TOUR.abrir, 400);
   }
 };
@@ -503,7 +502,8 @@ var UI = {
 };
 function chart(id, cfg) {
   var el = document.getElementById(id); if (!el || !window.Chart) return;
-  Chart.defaults.font.family = "Inter, system-ui, sans-serif"; Chart.defaults.color = "#64748b";
+  var osc = document.documentElement.getAttribute("data-theme") === "dark";
+  Chart.defaults.font.family = "Inter, system-ui, sans-serif"; Chart.defaults.color = osc ? "#a7b6c9" : "#64748b"; Chart.defaults.borderColor = osc ? "rgba(148,163,184,.16)" : "rgba(0,0,0,.08)";
   cfg.options = Object.assign({ responsive: true, maintainAspectRatio: false, animation: { duration: 700 }, plugins: {} }, cfg.options || {});
   cfg.options.plugins = Object.assign({ legend: { labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, font: { size: 11 } } }, tooltip: { backgroundColor: "#0b2540", padding: 10, cornerRadius: 8 } }, cfg.options.plugins);
   charts.push(new Chart(el, cfg));
@@ -540,7 +540,7 @@ Views.tablero = function () {
   var porMes = function (fn) { return MESES.map(function (m, i) { return evA.filter(function (e) { return +e.fecha.slice(5, 7) === i + 1 && fn(e); }).length; }); };
 
   App.titulo("Tablero de gestión SST", (S.fArea ? S.fArea + " · " : "") + "Año " + anio + " · " + CONFIG.EMPRESA,
-    selectorArea() + selectorAnio() + (L.rol() !== "COMITE" ? '<a class="btn primary" href="#/reportar">' + svg("reportar") + '<span class="hide-sm">Reportar evento</span></a>' : ""));
+    selectorArea() + selectorAnio() + (PRES.activo ? "" : '<button class="btn" onclick="PRES.iniciar()" title="Pantalla completa para el comité o un proyector">' + svg("presentar") + '<span class="hide-sm">Presentar</span></button>') + (L.rol() !== "COMITE" && !PRES.activo ? '<a class="btn primary" href="#/reportar">' + svg("reportar") + '<span class="hide-sm">Reportar evento</span></a>' : ""));
 
   var h = '<section class="hero"><div class="hero-main"><div class="hero-k">Días sin accidentes incapacitantes</div><div class="hero-n" data-count="' + (diasSin == null ? 0 : diasSin) + '">0</div>' +
     '<div class="hero-s">' + (incap ? "Último: <b>" + esc(incap.id) + "</b> · " + fFecha(incap.fecha) + " · " + esc(CAT.divDe(incap.area)) : "Sin accidentes incapacitantes registrados") + '</div>' +
@@ -568,7 +568,7 @@ Views.tablero = function () {
     '<div class="card c6"><h3>Lo que requiere tu atención <small>' + al.length + '</small></h3>' + alertasHTML(al.slice(0, 6)) + (al.length > 6 ? '<a href="#/alertas" class="small">Ver todas →</a>' : "") + '</div>' +
     '<div class="card c6"><h3>Mis acciones asignadas <small>' + mias.length + '</small></h3>' + (mias.length ? mias.slice(0, 6).map(function (a) {
       return '<div class="plazo"><span><a href="#/evento/' + a.evento_id + '/acciones">' + esc(a.id) + '</a> ' + esc(a.descripcion) + '</span><span class="flex nw">' + L.accPill(a) + '<span class="small muted">' + fFecha(a.fecha_compromiso) + '</span></span></div>';
-    }).join("") : '<div class="empty sm">No tienes acciones pendientes 👍</div>') + '</div></div>';
+    }).join("") : '<div class="vacio-sm"><span>' + svg("check") + '</span>No tienes acciones pendientes</div>') + '</div></div>';
   $("#view").innerHTML = h;
   UI.contar($("#view"));
   if (!window.Chart) return;
@@ -598,7 +598,7 @@ Views.tablero = function () {
 };
 function sum(a, b) { return a + b; }
 function recorta(s, n) { s = String(s); return s.length > n ? s.slice(0, n - 1) + "…" : s; }
-function vacio(id) { var el = document.getElementById(id); if (el) el.parentNode.innerHTML = '<div class="empty sm">Sin datos aún</div>'; }
+function vacio(id) { var el = document.getElementById(id); if (el) el.parentNode.innerHTML = '<div class="vacio-sm"><span>' + svg("indicadores") + '</span>Sin datos aún</div>'; }
 function alertasHTML(al) {
   if (!al.length) return '<div class="callout ok">✔ Todo al día: no hay plazos vencidos ni pendientes críticos.</div>';
   return al.map(function (a) {
@@ -648,13 +648,13 @@ function filtrarEventos(soloInv) {
 }
 function pintarEventos(soloInv) {
   var L2 = filtrarEventos(soloInv), el = $("#evList"); if (!el) return;
-  if (!L2.length) { el.innerHTML = '<div class="card empty">No hay eventos con esos filtros.</div>'; return; }
+  if (!L2.length) { el.innerHTML = vacioHTML("eventos", S.eventos.length ? "No hay eventos con esos filtros" : "Aún no hay eventos registrados", S.eventos.length ? "Prueba con otro año, tipo o estado, o borra la búsqueda." : "Cuando ocurra un accidente o incidente, regístralo aquí.", L.rol() !== "COMITE" ? '<a class="btn primary mt" href="#/reportar">' + svg("reportar") + 'Reportar evento</a>' : ""); return; }
   el.innerHTML = '<div class="ev-cards">' + L2.map(function (e) {
     var pg = L.pasos(e), pl = L.plazos(e), mal = pl.filter(function (x) { return x.st === "vencido"; }).length, pr = pl.filter(function (x) { return x.st === "pronto"; }).length, rg = CAT.riesgo((e.scat || {}).gravedad, (e.scat || {}).probabilidad, (e.scat || {}).exposicion);
     return '<a class="ev-card" href="#/evento/' + e.id + '" style="--c:' + ((CAT.get("tipoEvento", e.tipo) || {}).color || "#64748b") + '"><div class="evc-top"><b>' + esc(e.id) + '</b>' + L.tipoPill(e.tipo) + L.estadoPill(e.estado) + (rg ? '<span class="pill ' + rg.color + '">Riesgo ' + rg.nivel + '</span>' : "") + '<span class="spacer"></span>' +
       (e.estado === "Anulado" ? "" : mal ? '<span class="pill bad">⏰ ' + mal + ' plazo vencido</span>' : pr ? '<span class="pill warn">⏰ por vencer</span>' : '<span class="pill ok">al día</span>') + '</div>' +
       '<div class="evc-d">' + esc(e.descripcion) + '</div><div class="evc-m"><span>🗓 ' + fFecha(e.fecha) + ' ' + esc(e.hora || "") + '</span><span>👷 ' + esc(e.trabajador || "—") + '</span>' + areaChip(e.area) + '<span>🩺 ' + L.diasPerdidos(e.id) + ' d perdidos</span></div>' +
-      '<div class="evc-p"><div class="bar ' + (pg.pct === 100 ? "ok" : "") + '"><i style="width:' + pg.pct + '%"></i></div><span>' + pg.pct + '%</span><span class="small muted">' + (pg.siguiente && e.estado !== "Anulado" ? "Siguiente: " + esc(pg.siguiente.t) : "Completo") + '</span></div></a>';
+      GUIA.mini(e) + '</a>';
   }).join("") + '</div><p class="small muted">' + L2.length + ' evento(s)</p>';
 }
 function exportarEventos() {
@@ -757,7 +757,7 @@ function filtrarDM() {
 }
 function pintarDM(lista, destino) {
   var L2 = lista || filtrarDM(), hoy = hoyISO(), el = destino || $("#dmList"); if (!el) return;
-  if (!L2.length) { el.innerHTML = '<div class="card empty">No hay descansos médicos registrados.</div>'; return; }
+  if (!L2.length) { el.innerHTML = vacioHTML("descansos", "No hay descansos médicos", "Aquí aparecen los certificados de incapacidad con su sustento.", L.es("ADMIN","SST","MEDICO","JEFE") ? '<button class="btn primary mt" onclick="DM.editar()">＋ Registrar descanso</button>' : ""); return; }
   el.innerHTML = '<div class="tbl-wrap"><table class="t"><thead><tr><th>Código</th><th>Trabajador</th><th>Periodo</th><th class="num">Días</th><th>Origen / evento</th><th>Documento</th><th>Diagnóstico</th><th>Sustento</th><th>Estado</th></tr></thead><tbody>' +
     L2.map(function (d) {
       var vig = d.inicio <= hoy && d.fin >= hoy;
@@ -838,7 +838,7 @@ function filtrarAcc() {
 }
 function pintarAcc(lista, destino) {
   var L2 = lista || filtrarAcc(), el = destino || $("#acList"); if (!el) return;
-  if (!L2.length) { el.innerHTML = '<div class="card empty">No hay acciones con esos filtros.</div>'; return; }
+  if (!L2.length) { el.innerHTML = vacioHTML("acciones", "No hay acciones con esos filtros", "Las medidas del plan de acción se generan desde el análisis SCAT de cada evento."); return; }
   el.innerHTML = '<div class="tbl-wrap"><table class="t"><thead><tr><th>Código</th><th>Acción</th><th>Causa que ataca</th><th>Responsable</th><th>Compromiso</th><th>Avance</th><th>Estado</th><th>Eficacia</th></tr></thead><tbody>' +
     L2.map(function (a) {
       var d = diasHasta(a.fecha_compromiso);
@@ -946,7 +946,7 @@ function filtrarAud() {
 }
 function pintarAud() {
   var L2 = filtrarAud(), el = $("#audList"); if (!el) return;
-  el.innerHTML = !L2.length ? '<div class="card empty">Sin registros.</div>' : '<div class="tbl-wrap"><table class="t"><thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th><th>Registro</th><th>Detalle (antes → después)</th></tr></thead><tbody>' +
+  el.innerHTML = !L2.length ? vacioHTML("auditoria", "Sin registros", "No hay movimientos con esa búsqueda.") : '<div class="tbl-wrap"><table class="t"><thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th><th>Registro</th><th>Detalle (antes → después)</th></tr></thead><tbody>' +
     L2.slice(0, 500).map(function (f) {
       return '<tr><td class="tnum nw">' + fFechaHora(f.ts) + '</td><td>' + esc(f.nombre) + '<div class="sub">' + esc(f.rol) + '</div></td><td><span class="pill info">' + esc(f.accion) + '</span></td>' +
         '<td>' + esc(f.entidad) + '<div class="sub">' + (f.entidad === "eventos" ? '<a href="#/evento/' + esc(f.entidad_id) + '">' + esc(f.entidad_id) + '</a>' : esc(f.entidad_id)) + '</div></td><td class="small" style="max-width:560px;word-break:break-word">' + esc(f.detalle) + '</td></tr>';
@@ -1003,5 +1003,10 @@ Views.cuenta = function () {
     '<div class="plazo"><span>Ingreso</span><span class="small">Con tu número de documento registrado en SSOMA</span></div>' +
     '<div class="flex mt"><button class="btn" onclick="App.logout()">Cerrar sesión</button>' +
     (RECIENTES.de(u.dni) ? '<button class="btn ghost" onclick="RECIENTES.quitar(S.user.dni);toast(\'Quitado de los accesos recientes de este equipo\',\'ok\');Views.cuenta()">Quitarme de los accesos recientes</button>' : "") + '</div>' +
-    '<p class="small muted mt">En equipos compartidos, cierra sesión al terminar y quítate de los accesos recientes.</p></div>';
+    '<p class="small muted mt">En equipos compartidos, cierra sesión al terminar y quítate de los accesos recientes.</p></div>' +
+    '<div class="card" style="max-width:680px"><h3>Preferencias de este equipo</h3>' +
+    '<label class="pref"><span><b>Modo oscuro</b><small>Más cómodo de noche o en sala con poca luz. Los PDF siguen saliendo en blanco.</small></span><input type="checkbox" class="sw" ' + (TEMA.actual() === "oscuro" ? "checked" : "") + ' onchange="TEMA.alternar()"></label>' +
+    '<label class="pref"><span><b>Sonido de aviso</b><small>Dos notas suaves cuando llega una tarea nueva a «Mis pendientes».</small></span><input type="checkbox" class="sw" ' + (AVISOS.conf().sonido ? "checked" : "") + ' onchange="AVISOS.guardar(\'sonido\',this.checked);if(this.checked)AVISOS.sonar()"></label>' +
+    '<label class="pref"><span><b>Vibración</b><small>En celulares Android, el teléfono vibra al llegar una tarea nueva.</small></span><input type="checkbox" class="sw" ' + (AVISOS.conf().vibrar ? "checked" : "") + ' onchange="AVISOS.guardar(\'vibrar\',this.checked)"></label>' +
+    '<p class="small muted mt">La app revisa si hay tareas nuevas cada 5 minutos mientras está abierta.</p></div>';
 };

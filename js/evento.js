@@ -6,7 +6,7 @@ var EV = {
 
   render: function (id, tab) {
     var ev = L.evento(id);
-    if (!ev) { App.titulo("Evento no encontrado", ""); $("#view").innerHTML = '<div class="card empty">El evento ' + esc(id) + ' no existe o no tienes acceso.</div>'; return; }
+    if (!ev) { App.titulo("Evento no encontrado", ""); $("#view").innerHTML = vacioHTML("buscar", "No encontramos el evento " + id, "Puede que el código esté mal escrito o que no tengas acceso a esa área.", '<div class="flex mt" style="justify-content:center"><button class="btn primary" onclick="BUSCAR.abrir()">' + svg("buscar") + 'Buscar un caso</button><a class="btn" href="#/eventos">Ver eventos</a></div>'); return; }
     if (EV.id !== id) { EV.draft = null; DOCS.cargarFirmas(id); }
     EV.id = id; EV.tab = tab;
     var pg = L.pasos(ev), acc = L.accionesDe(id), dm = L.dmDe(id), s = ev.scat || {}, rg = CAT.riesgo(s.gravedad, s.probabilidad, s.exposicion), t = CAT.get("tipoEvento", ev.tipo) || {};

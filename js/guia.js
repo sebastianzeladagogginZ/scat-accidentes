@@ -260,12 +260,20 @@ Views.inicio = function () {
     var anio = S.anio, base = S.eventos.filter(function (e) { return e.estado !== "Anulado"; });
     var incap = base.filter(function (e) { var t = CAT.get("tipoEvento", e.tipo); return t && t.cuentaIF; }).sort(function (a, b) { return a.fecha < b.fecha ? 1 : -1; })[0];
     var abiertas = base.filter(function (e) { return ["Reportado","En investigación","Observado","En revisión"].indexOf(e.estado) >= 0; }).length;
-    var venc = S.acciones.filter(L.accVencida).length, evA = base.filter(function (e) { return String(e.fecha).slice(0, 4) == anio; }).length;
+    var venc = S.acciones.filter(L.accVencida).length, evsA = base.filter(function (e) { return String(e.fecha).slice(0, 4) == anio; }), evA = evsA.length;
+    var porMes = MESES.map(function (m, i) { return evsA.filter(function (e) { return +String(e.fecha).slice(5, 7) === i + 1; }).length; }), mx = Math.max.apply(null, porMes.concat([1])), mesHoy = new Date().getMonth();
+    var cerr = S.acciones.filter(function (a) { return a.estado === "Cerrada"; }), aTiempo = cerr.filter(function (a) { return !a.fecha_cierre || a.fecha_cierre <= a.fecha_compromiso; }).length;
+    var abiertasA = S.acciones.filter(function (a) { return a.estado !== "Cerrada" && !L.accVencida(a); }).length, cumpl = S.acciones.length ? Math.round((aTiempo + abiertasA) / S.acciones.length * 100) : 100;
+    var barras = '<div class="mch"><div class="mch-h"><b>Eventos por mes</b><span>' + anio + '</span></div><div class="mch-b">' + porMes.map(function (n, i) {
+      return '<div class="' + (i === mesHoy && +anio === new Date().getFullYear() ? "hoy" : "") + '" title="' + MESES[i] + ': ' + n + ' evento(s)"><i style="height:' + Math.max(n / mx * 100, n ? 10 : 3) + '%"></i><span>' + MESES[i].charAt(0) + '</span></div>';
+    }).join("") + '</div></div>';
+    var cump = '<div class="mcu"><div class="mcu-r" style="--p:' + cumpl + ';--c:' + (cumpl >= 90 ? "var(--ok)" : cumpl >= 70 ? "var(--on)" : "var(--bad)") + '"><span>' + cumpl + '%</span></div><div><b>Cumplimiento del plan</b><span>acciones cerradas a tiempo o dentro de plazo</span></div></div>';
     lado += '<div class="card"><h3>Resumen ' + anio + '</h3><div class="mini">' +
       '<a href="#/tablero"><b class="tnum">' + (incap ? -diasHasta(incap.fecha) : "—") + '</b><span>días sin accidentes incapacitantes</span></a>' +
       '<a href="#/eventos"><b class="tnum">' + evA + '</b><span>eventos registrados</span></a>' +
       '<a href="#/investigaciones"><b class="tnum">' + abiertas + '</b><span>investigaciones abiertas</span></a>' +
       '<a href="#/acciones" class="' + (venc ? "bad" : "") + '"><b class="tnum">' + venc + '</b><span>acciones vencidas</span></a></div>' +
+      barras + cump +
       '<a class="btn block mt" href="#/tablero">' + svg("tablero") + 'Abrir el tablero completo</a></div>';
   }
   $("#view").innerHTML = h + '<div class="ini"><div class="ini-main"><div class="card"><h3>Tus pendientes <small>' + pend.length + '</small></h3>' + tareas + '</div></div><div class="ini-side">' + lado + '</div></div>';
@@ -400,5 +408,135 @@ var CARATULAS = {
     sl.forEach(function (s, k) { s.classList.toggle("out", k === CARATULAS.i && k !== j); s.classList.toggle("on", k === j); });
     ds.forEach(function (d, k) { d.classList.remove("on"); d.classList.toggle("done", k < j); void d.offsetWidth; if (k === j) d.classList.add("on"); });
     CARATULAS.i = j;
+  }
+};
+
+/* ---------- MENSAJES VACÍOS CON ILUSTRACIÓN ---------- */
+function vacioHTML(ic, t, d, cta) {
+  return '<div class="card vacio"><div class="va-il"><i></i><i></i><span>' + svg(ic || "buscar") + '</span></div><b>' + esc(t) + '</b>' + (d ? '<p>' + esc(d) + '</p>' : "") + (cta || "") + '</div>';
+}
+
+/* ---------- MINI AVANCE DE 6 PASOS (tarjetas de la lista de eventos) ---------- */
+GUIA.mini = function (ev) {
+  if (ev.estado === "Anulado") return '<div class="mini-f"><span class="small muted">Evento anulado</span></div>';
+  var g = GUIA.fases(ev), cur = ev.estado === "Cerrado" ? null : g.cur, s = ev.estado === "Cerrado" ? null : g.sig;
+  return '<div class="mini-f"><div class="mf-b">' + g.fases.map(function (f) { return '<i class="' + (f.ok ? "ok" : cur && f.n === cur.n ? "cur" : "") + '" title="' + esc(f.n + ". " + f.t) + '"></i>'; }).join("") + '</div>' +
+    '<span class="mf-t"><b>' + (ev.estado === "Cerrado" ? "Cerrado" : cur ? "Paso " + cur.n + " de 6 · " + esc(cur.t) : "Completo") + '</b>' + (s ? " · sigue: " + esc(recorta(s.t, 60)) : "") + '</span><span class="mf-p">' + g.pct + '%</span></div>';
+};
+
+/* ---------- CARGA CON ESQUELETO (en vez de «Cargando…») ---------- */
+var ESQ = {
+  html: function () {
+    var b = function (w, h, extra) { return '<i class="sk" style="width:' + w + ';height:' + h + 'px;' + (extra || "") + '"></i>'; };
+    var card = function (n) { var s = '<div class="card sk-card">' + b("38%", 14, "margin-bottom:16px"); for (var i = 0; i < n; i++) s += '<div class="sk-row">' + b("42px", 42, "border-radius:13px;flex:none") + '<div style="flex:1;display:grid;gap:7px">' + b("62%", 12) + b("40%", 10) + '</div>' + b("78px", 30, "border-radius:10px") + '</div>'; return s + '</div>'; };
+    return '<div class="sk-head">' + b("24%", 12, "opacity:.5") + b("40%", 30, "margin-top:10px;opacity:.5") + b("30%", 14, "margin-top:10px;opacity:.5") + '</div>' +
+      '<div class="ini"><div>' + card(4) + '</div><div>' + card(3) + '</div></div>';
+  },
+  mostrar: function () {
+    $("#login").hidden = true; $("#app").hidden = false; TEMA.aplicar();
+    $("#nav").innerHTML = new Array(8).join('<i class="sk sk-nav"></i>');
+    $("#pgTitle").textContent = "Preparando tu información…"; $("#pgSub").textContent = ""; $("#pgActions").innerHTML = ""; $("#pgCrumbs").innerHTML = ""; $("#pgBack").hidden = true;
+    $("#view").innerHTML = ESQ.html();
+  }
+};
+
+/* ---------- MODO OSCURO (por equipo; el ingreso y los PDF quedan siempre claros) ---------- */
+var TEMA = {
+  K: "scat_tema",
+  actual: function () { try { return localStorage.getItem(TEMA.K) === "oscuro" ? "oscuro" : "claro"; } catch (e) { return "claro"; } },
+  aplicar: function (enApp) {
+    var osc = enApp !== false && TEMA.actual() === "oscuro";
+    if (osc) document.documentElement.setAttribute("data-theme", "dark"); else document.documentElement.removeAttribute("data-theme");
+    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = osc ? "#0b1320" : "#0b2540";
+    var b = $("#btnTema"); if (b) { b.innerHTML = svg(osc ? "sol" : "luna"); b.title = osc ? "Cambiar a modo claro" : "Cambiar a modo oscuro"; }
+  },
+  alternar: function () {
+    try { localStorage.setItem(TEMA.K, TEMA.actual() === "oscuro" ? "claro" : "oscuro"); } catch (e) {}
+    TEMA.aplicar(); App.route();
+  }
+};
+Object.assign(ICON, {
+  luna: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  sol: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  presentar: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  salir: '<path d="M18 6 6 18M6 6l12 12"/>',
+  campana: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>'
+});
+
+/* ---------- MODO PRESENTACIÓN (comité, proyector) ---------- */
+var PRES = {
+  activo: false, reloj: null,
+  iniciar: function (vista) {
+    PRES.activo = true; document.body.classList.add("presenta");
+    var de = document.documentElement; if (de.requestFullscreen) de.requestFullscreen().catch(function () {});
+    var bar = document.createElement("div"); bar.className = "pres-bar"; bar.id = "presBar";
+    bar.innerHTML = '<img src="img/logo-oscuro.svg" alt=""><div class="pb-t"><b>Gestión de seguridad y salud en el trabajo</b><span id="presHora"></span></div><span class="spacer"></span>' +
+      '<button data-v="tablero">Tablero</button><button data-v="indicadores">Indicadores</button><button data-v="alertas">Alertas</button><button class="pb-x" title="Salir (Esc)">' + svg("salir") + 'Salir</button>';
+    document.body.appendChild(bar);
+    $$("button[data-v]", bar).forEach(function (b) { b.onclick = function () { location.hash = "#/" + b.dataset.v; }; });
+    $(".pb-x", bar).onclick = PRES.salir;
+    var hora = function () { var el = $("#presHora"); if (el) { var t = new Date().toLocaleString("es-PE", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }); el.textContent = t.charAt(0).toUpperCase() + t.slice(1); } };
+    hora(); PRES.reloj = setInterval(hora, 30000);
+    if (location.hash !== "#/" + (vista || "tablero")) location.hash = "#/" + (vista || "tablero"); else App.route();
+  },
+  salir: function () {
+    if (!PRES.activo) return; PRES.activo = false; document.body.classList.remove("presenta"); clearInterval(PRES.reloj);
+    var b = $("#presBar"); if (b) b.remove();
+    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
+    App.route();
+  },
+  marcar: function (v) { $$("#presBar button[data-v]").forEach(function (b) { b.classList.toggle("on", b.dataset.v === v); }); }
+};
+document.addEventListener("fullscreenchange", function () { if (!document.fullscreenElement && PRES.activo) PRES.salir(); });
+document.addEventListener("keydown", function (e) { if (e.key === "Escape" && PRES.activo && !$(".modal-bg") && !$(".cmdk-bg")) PRES.salir(); });
+
+/* ---------- AVISOS: revisa cada 5 min si hay tareas nuevas (sonido suave + vibración) ---------- */
+var AVISOS = {
+  K: "scat_avisos", t: null, ult: 0, prev: null, ctx: null,
+  conf: function () { try { var c = JSON.parse(localStorage.getItem(AVISOS.K) || "{}") || {}; return { sonido: c.sonido !== false, vibrar: c.vibrar !== false }; } catch (e) { return { sonido: true, vibrar: true }; } },
+  guardar: function (k, v) { var c = AVISOS.conf(); c[k] = v; try { localStorage.setItem(AVISOS.K, JSON.stringify(c)); } catch (e) {} toast(v ? "Activado" : "Desactivado", "ok"); },
+  claves: function () { return PEND.lista().map(function (x) { return x.t + "|" + x.h; }); },
+  iniciar: function () {
+    AVISOS.prev = AVISOS.claves(); AVISOS.ult = Date.now(); AVISOS.titulo();
+    if (AVISOS.t) return;
+    AVISOS.t = setInterval(AVISOS.revisar, 60000);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) AVISOS.revisar(); });
+    // El navegador solo permite sonido después de un toque del usuario: se prepara en el primer clic.
+    document.addEventListener("pointerdown", function () { if (!AVISOS.ctx && (window.AudioContext || window.webkitAudioContext)) try { AVISOS.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }, { once: true });
+  },
+  revisar: function () {
+    if (!S.user || document.hidden || PRES.activo || Date.now() - AVISOS.ult < 5 * 60000) return;
+    var v = (location.hash.replace(/^#\//, "").split("/")[0]) || "inicio";
+    if (["evento","reportar","usuarios"].indexOf(v) >= 0 || $(".modal-bg") || $(".cmdk-bg")) return;    // no interrumpir mientras se edita
+    AVISOS.ult = Date.now();
+    API.call("bootstrap").then(function (r) {
+      if (!r || !r.ok || !S.user) return;
+      S.eventos = r.eventos; S.acciones = r.acciones; S.descansos = r.descansos; S.hht = r.hht; S.equipo = r.equipo; S.firmasResumen = r.firmasResumen || {}; DOCS.cache = {};
+      S.eventos.sort(function (a, b) { return (b.fecha + b.hora) < (a.fecha + a.hora) ? -1 : 1; });
+      var ahora = AVISOS.claves(), nuevas = ahora.filter(function (k) { return AVISOS.prev.indexOf(k) < 0; });
+      AVISOS.prev = ahora;
+      var v2 = (location.hash.replace(/^#\//, "").split("/")[0]) || "inicio";
+      if (v2 === "inicio" && !$(".modal-bg")) { var y = window.scrollY; Views.inicio(); App.nav(); window.scrollTo(0, y); } else App.nav();
+      AVISOS.titulo();
+      if (nuevas.length) AVISOS.avisar(nuevas.length);
+    });
+  },
+  titulo: function () { if (!S.user) return; var n = PEND.lista().length, t = document.title.replace(/^\(\d+\)\s*/, ""); document.title = (n ? "(" + n + ") " : "") + t; },
+  avisar: function (n) {
+    var c = AVISOS.conf();
+    toast(n === 1 ? "Tienes una tarea nueva en «Mis pendientes»" : "Tienes " + n + " tareas nuevas en «Mis pendientes»", "ok");
+    if (c.vibrar && navigator.vibrate) try { navigator.vibrate([70, 60, 70]); } catch (e) {}
+    if (c.sonido) AVISOS.sonar();
+  },
+  sonar: function () {
+    var a = AVISOS.ctx; if (!a) return;
+    try {
+      if (a.state === "suspended") a.resume();
+      [[880, 0], [1320, .14]].forEach(function (n) {           // dos notas cortas y suaves
+        var o = a.createOscillator(), g = a.createGain(), t0 = a.currentTime + n[1];
+        o.type = "sine"; o.frequency.value = n[0]; g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.08, t0 + .02); g.gain.exponentialRampToValueAtTime(.0001, t0 + .35);
+        o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0 + .4);
+      });
+    } catch (e) {}
   }
 };
