@@ -624,6 +624,9 @@ kbd{font-family:inherit;font-size:10.5px;font-weight:700;color:var(--muted);back
 .tab .t-next{width:8px;height:8px;border-radius:50%;background:var(--on);box-shadow:0 0 0 3px #ffedd5}
 .tabs{top:var(--tbh,76px);background:rgba(242,245,249,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 
+.foco{animation:foco 2.4s ease-out}
+@keyframes foco{0%,30%{box-shadow:0 0 0 3px var(--on),0 0 0 9px rgba(242,140,40,.22)}100%{box-shadow:0 0 0 0 rgba(242,140,40,0),var(--sh)}}
+
 /* ===== BUSCADOR (Ctrl + K) ===== */
 .cmdk-bg{position:fixed;inset:0;z-index:950;background:rgba(7,27,48,.42);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;justify-content:center;align-items:flex-start;padding:10vh 16px 16px;animation:fade .2s}
 .cmdk{width:100%;max-width:640px;background:rgba(255,255,255,.96);border:1px solid rgba(255,255,255,.6);border-radius:20px;box-shadow:0 40px 90px -20px rgba(7,27,48,.55);overflow:hidden;animation:zoomin .32s var(--ease)}
@@ -912,13 +915,13 @@ body.presenta .g-v{font-size:32px}
 <div id="toasts" aria-live="polite"></div>
 <div class="loading" id="loading" hidden><div class="load-box"><div class="spin"></div><span id="loadTxt"></span></div></div>
 
-<script src="js/catalogos.js?v=3.2.1"></script>
-<script src="js/api.js?v=3.2.1"></script>
-<script src="js/app.js?v=3.2.1"></script>
-<script src="js/firma.js?v=3.2.1"></script>
-<script src="js/docs.js?v=3.2.1"></script>
-<script src="js/evento.js?v=3.2.1"></script>
-<script src="js/guia.js?v=3.2.1"></script>
+<script src="js/catalogos.js?v=3.2.2"></script>
+<script src="js/api.js?v=3.2.2"></script>
+<script src="js/app.js?v=3.2.2"></script>
+<script src="js/firma.js?v=3.2.2"></script>
+<script src="js/docs.js?v=3.2.2"></script>
+<script src="js/evento.js?v=3.2.2"></script>
+<script src="js/guia.js?v=3.2.2"></script>
 <script>App.init();</script>
 </body>
 </html>

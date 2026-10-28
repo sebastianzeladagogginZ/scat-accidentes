@@ -118,7 +118,7 @@ var GUIA = {
   siguiente: function (ev, pg) {
     var p = pg.siguiente; if (!p || ev.estado === "Anulado" || ev.estado === "Cerrado") return null;
     var fal = GUIA.faltan(ev), mias = fal.filter(function (x) { return x.mia; }), ed = EV.puede(ev), r = L.rol();
-    var o = { t: p.t, tab: p.tab, puede: ed, quien: "Equipo investigador", nota: "" };
+    var o = { t: p.t, tab: p.tab, puede: ed, quien: "Equipo investigador", nota: "", k: p.k };
     if (p.k === "firmas" && !fal.length && ["Aprobado","Cerrado"].indexOf(ev.estado) < 0) p = { k: "revision", t: "Investigación revisada y aprobada", tab: "resumen" };
     switch (p.k) {
       case "reporte": o.quien = "Quien reportó o SSOMA"; break;
@@ -154,10 +154,22 @@ var GUIA = {
       var href = "#/evento/" + ev.id + "/" + s.tab;
       h += '<div class="sigue ' + (s.puede ? "yo" : "") + '"><div class="sg-ic">' + svg(s.puede ? "flecha" : "reloj") + '</div><div class="sg-tx"><div class="sg-k">' + (s.puede ? "Lo que sigue · te toca a ti" : "Lo que sigue · en manos de otra persona") + '</div>' +
         '<b>' + esc(s.t) + '</b><span>Responsable: ' + esc(s.quien) + (s.nota ? " · " + esc(s.nota) : "") + '</span></div>' +
-        (s.puede ? (s.accion ? '<button class="btn primary lg" onclick="' + s.accion + '">' + esc(s.cta) + ' →</button>' : '<a class="btn primary lg" href="' + esc(href) + '" data-t="' + esc(s.tab) + '" onclick="if(location.hash===this.getAttribute(\'href\')){event.preventDefault();EV.ir(this.dataset.t)}">' + esc(s.cta || "Hacerlo ahora") + ' →</a>')
+        (s.puede ? (s.accion ? '<button class="btn primary lg" onclick="' + s.accion + '">' + esc(s.cta) + ' →</button>' : '<a class="btn primary lg" href="' + esc(href) + '" data-t="' + esc(s.tab) + '" data-k="' + esc(s.k) + '" onclick="GUIA.foco=this.dataset.k;if(location.hash===this.getAttribute(\'href\')){event.preventDefault();EV.ir(this.dataset.t)}">' + esc(s.cta || "Hacerlo ahora") + ' →</a>')
           : '<a class="btn" href="' + esc(href) + '">Ver detalle</a>') + '</div>';
     } else h += '<div class="sigue fin"><div class="sg-ic">' + svg("check") + '</div><div class="sg-tx"><b>' + (ev.estado === "Cerrado" ? "Expediente cerrado" : "Todas las tareas del procedimiento están completas") + '</b><span>Queda disponible para consulta y auditoría' + (ev.estado === "Cerrado" && g.pct < 100 ? " · avance registrado: " + g.pct + "%" : "") + '.</span></div></div>';
     return h + '</div>';
+  },
+  /* Lleva la vista al recuadro del paso pedido y lo resalta un momento. */
+  foco: null,
+  enfocar: function () {
+    var k = GUIA.foco; if (!k) return; GUIA.foco = null;
+    setTimeout(function () {
+      var el = document.querySelector('[data-paso="' + k + '"]'); if (!el) return;
+      var top = el.getBoundingClientRect().top + window.scrollY - (($(".topbar") || {}).offsetHeight || 70) - (($(".tabs") || {}).offsetHeight || 46) - 14;
+      window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
+      el.classList.remove("foco"); void el.offsetWidth; el.classList.add("foco");
+      setTimeout(function () { el.classList.remove("foco"); }, 2600);
+    }, 80);
   },
   /* Para marcar las pestañas: hecha (✓) o donde está el siguiente paso (punto naranja). */
   tabsEstado: function (ev) {

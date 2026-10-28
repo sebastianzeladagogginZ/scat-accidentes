@@ -27,12 +27,13 @@ var EV = {
     if (tab === "formatos") return DOCS.tab(ev);
     (EV.tabs[tab] || EV.tabs.resumen)(ev);
     var at = $(".tab.active"); if (at && at.scrollIntoView) at.scrollIntoView({ block: "nearest", inline: "center" });
+    GUIA.enfocar();
   },
   puede: function (ev) { return L.puedeEditarEv(ev); },
   guardarEv: function (ev, msg, tabDestino) {
     return App.guardar("eventos", ev).then(function (r) {
       if (!r) return null;
-      toast(msg || "Cambios guardados", "ok");
+      var sig = L.pasos(r).siguiente; toast((msg || "Cambios guardados") + (sig && r.estado !== "Anulado" ? " · Sigue: " + sig.t : ""), "ok");
       if (r.estado === "Reportado" && L.es("ADMIN","SST","JEFE") && EV.tieneInvestigacion(r)) return EV.transicion(r, "En investigación", "Inicio automático al registrar datos de la investigación", true);
       EV.ir(tabDestino || EV.tab); return r;
     });
@@ -88,7 +89,7 @@ EV.tabs.resumen = function (ev) {
   h += '<div class="row2 mb"><div class="card"><h3>Ruta del procedimiento <small>SST-PR-03</small></h3><div class="steps">' + pg.pasos.map(function (p) {
       var next = pg.siguiente && pg.siguiente.k === p.k;
       return '<div class="step ' + (p.na ? "na" : p.ok ? "done" : next ? "next" : "") + '"><span class="ic">' + (p.na ? "–" : p.ok ? "✓" : "") + '</span><span>' + esc(p.t) + (p.na ? ' <span class="small muted">(no aplica)</span>' : "") + '</span>' +
-        (!p.ok && !p.na ? '<a class="btn sm go ' + (next ? "primary" : "") + '" href="#/evento/' + ev.id + '/' + p.tab + '">' + (next ? "Hacer ahora" : "Ir") + '</a>' : "") + '</div>';
+        (!p.ok && !p.na ? '<a class="btn sm go ' + (next ? "primary" : "") + '" href="#/evento/' + esc(ev.id) + '/' + p.tab + '" data-k="' + p.k + '" onclick="GUIA.foco=this.dataset.k;if(location.hash===this.getAttribute(\'href\')){event.preventDefault();EV.ir(\'' + p.tab + '\')}">' + (next ? "Hacer ahora" : "Ir") + '</a>' : "") + '</div>';
     }).join("") + '</div></div><div><div class="card"><h3>Plazos</h3>' + L.plazos(ev).map(function (p) {
       var c = { ok: ["ok","Cumplido"], tarde: ["warn","Fuera de plazo"], vencido: ["bad","Vencido"], pronto: ["warn","Por vencer"], pendiente: ["info","En plazo"], na: ["","—"] }[p.st];
       return '<div class="plazo"><span>' + esc(p.t) + '<br><span class="small muted">Límite ' + fFechaHora(p.lim.toISOString()) + (p.hecho ? " · hecho " + fFechaHora(p.hecho.toISOString()) : "") + '</span></span><span class="pill ' + c[0] + '">' + c[1] + '</span></div>';
@@ -109,14 +110,14 @@ EV.aplicarTipo = function (c) { var ev = clone(L.evento(EV.id)), t = CAT.get("ti
 var CAMPOS_MTPE = [{ k: "fecha", label: "Fecha de notificación", type: "date" }, { k: "hora", label: "Hora", type: "time" }, { k: "nro", label: "N.° de constancia" }, { k: "por", label: "Notificado por" }, { k: "notifica", label: "Quién notificó", type: "select", opts: ["Empleador","Centro médico"] }];
 EV.tabs.respuesta = function (ev) {
   var ed = EV.puede(ev), t = CAT.get("tipoEvento", ev.tipo), m = ev.mtpe || {};
-  var h = '<div class="card" id="inmBox"><h3>Acciones inmediatas <small>§6.2 — control de la situación</small></h3>' + formHTML(CAMPOS_INMEDIATAS, ev.inmediatas || {}, !ed, "g3") + '</div>';
-  h += '<div class="card" id="mtpeBox"><h3>Notificación al MTPE <small>Ley 29783 art. 82 · Anexo 01</small></h3>' +
+  var h = '<div class="card" id="inmBox" data-paso="inmediatas"><h3>Acciones inmediatas <small>§6.2 — control de la situación</small></h3>' + formHTML(CAMPOS_INMEDIATAS, ev.inmediatas || {}, !ed, "g3") + '</div>';
+  h += '<div class="card" id="mtpeBox" data-paso="mtpe"><h3>Notificación al MTPE <small>Ley 29783 art. 82 · Anexo 01</small></h3>' +
     (t && t.mtpe24 ? '<div class="callout ' + (m.fecha ? "ok" : "bad") + ' mb"><span>' + (m.fecha ? "✔" : "⚠️") + '</span><div><b>' + (m.fecha ? "Notificado" : "Obligatoria dentro de 24 horas") + '</b>' + esc(t.t) + ': el empleador notifica con el Formulario N.° 1 del portal del MTPE. ' + (/Contratista/.test(ev.regimen || "") ? "Aunque sea personal contratista, notifica Optical Networks (§6.7)." : "") + '</div></div>'
       : '<div class="callout info mb"><span>ℹ️</span><div>Para este tipo de evento el empleador no notifica en 24 h. En accidentes no mortales notifica el centro médico (Formulario N.° 2) hasta el último día hábil del mes siguiente.</div></div>') +
     formHTML(CAMPOS_MTPE, m, !ed, "g3") + '<div class="mt">' + adjuntosHTML("eventos", { id: ev.id, adjuntos: (ev.adjuntos || []).filter(function (a) { return a.categoria === "Constancia MTPE"; }) }, L.es("ADMIN","SST")) + '</div>' +
     (ed ? '<label class="drop mt">📎 Adjuntar constancia de notificación<input type="file" hidden accept="image/*,application/pdf" onchange="subirArchivos(\'eventos\',\'' + ev.id + '\',this.files,\'Constancia MTPE\').then(function(){EV.render(EV.id,EV.tab)})"></label>' : "") + '</div>';
-  h += '<div class="card"><h3>Equipo investigador <small>§6.3.1 — cada integrante firmará el análisis SCAT y el registro de investigación</small></h3>' +
-    ((ev.equipo || []).length ? '<div class="team">' + ev.equipo.map(function (x, i) { return '<div class="tm"><div class="av">' + iniciales(x.nombre) + '</div><div><b>' + esc(x.nombre) + '</b><span>' + esc(x.rol) + (x.dni ? " · " + esc(x.dni) : "") + '</span></div>' + (ed ? '<button class="btn sm ghost" title="Quitar" onclick="EV.quitarEquipo(' + i + ')">✕</button>' : "") + '</div>'; }).join("") + '</div>' : '<div class="muted small mb">Aún no se conforma el equipo.</div>') +
+  h += '<div class="card" data-paso="equipo"><h3>Equipo investigador <small>§6.3.1 — cada integrante firmará el análisis SCAT y el registro de investigación</small></h3>' +
+    ((ev.equipo || []).length ? '<div class="team">' + ev.equipo.map(function (x, i) { return '<div class="tm"><div class="av">' + iniciales(x.nombre) + '</div><div><b>' + esc(x.nombre) + '</b><span>' + esc(x.rol) + (x.dni ? " · " + esc(x.dni) : "") + '</span></div>' + (ed ? '<button class="btn sm ghost" title="Quitar" onclick="EV.quitarEquipo(' + i + ')">✕</button>' : "") + '</div>'; }).join("") + '</div>' : '<div class="callout warn mb"><span>👥</span><div><b>Falta conformar el equipo investigador</b>Elige a cada integrante y pulsa «＋ Agregar al equipo». Si lo dejas elegido, se agrega también al pulsar «Guardar respuesta inicial».</div></div>') +
     (ed ? '<div class="grid g4 mt" id="eqBox"><div class="f span2"><label>Integrante (usuario del sistema)</label><select id="eqU"><option value="">— o registra un externo —</option>' + S.equipo.map(function (u) { return '<option value="' + u.dni + '">' + esc(u.nombre) + ' · ' + esc((CAT.roles[u.rol] || {}).t || u.rol) + '</option>'; }).join("") + '</select></div>' +
       '<div class="f"><label>…o persona externa</label><input id="eqExt" placeholder="Nombre"></div><div class="f"><label>DNI (externo)</label><input id="eqDni" inputmode="numeric"></div><div class="f span2"><label>Rol en la investigación</label><select id="eqRol">' + ["Líder de investigación","Representante del empleador","Representante del Comité SST","Supervisor SST","Jefe inmediato","Trabajador afectado","Testigo","Especialista / persona competente"].map(function (x) { return "<option>" + x + "</option>"; }).join("") + '</select></div>' +
       '<div class="f span2" style="align-self:end"><button class="btn block" onclick="EV.agregarEquipo()">＋ Agregar al equipo</button></div></div>' : "") + '</div>';
@@ -124,11 +125,26 @@ EV.tabs.respuesta = function (ev) {
   $("#tabBody").innerHTML = h;
 };
 EV.leerRespuesta = function (ev) { ev.inmediatas = leerForm($("#inmBox"), CAMPOS_INMEDIATAS, ev.inmediatas || {}); ev.mtpe = leerForm($("#mtpeBox"), CAMPOS_MTPE, ev.mtpe || {}); return ev; };
-EV.guardarRespuesta = function () { EV.guardarEv(EV.leerRespuesta(clone(L.evento(EV.id)))); };
+/* Integrante elegido en el formulario del equipo (aunque no se haya pulsado «Agregar»). */
+EV.integranteElegido = function () {
+  if (!$("#eqU")) return null;
+  var dni = $("#eqU").value, ext = $("#eqExt").value.trim(), rol = $("#eqRol").value, u = S.equipo.filter(function (x) { return x.dni === dni; })[0];
+  if (!u && !ext) return null;
+  return u ? { dni: u.dni, nombre: u.nombre, rol: rol, cargo: u.cargo } : { dni: $("#eqDni").value.replace(/\D/g, ""), nombre: ext.toUpperCase(), rol: rol };
+};
+EV.sumarIntegrante = function (ev, x) {
+  ev.equipo = ev.equipo || [];
+  if (ev.equipo.some(function (q) { return (x.dni && q.dni === x.dni) || (!x.dni && q.nombre === x.nombre); })) return false;   // sin duplicados
+  ev.equipo.push(x); return true;
+};
+EV.guardarRespuesta = function () {
+  var ev = EV.leerRespuesta(clone(L.evento(EV.id))), x = EV.integranteElegido(), sumo = x && EV.sumarIntegrante(ev, x);
+  EV.guardarEv(ev, sumo ? "Respuesta inicial guardada y " + x.nombre + " agregado al equipo" : "Respuesta inicial guardada");
+};
 EV.agregarEquipo = function () {
-  var ev = EV.leerRespuesta(clone(L.evento(EV.id))), dni = $("#eqU").value, ext = $("#eqExt").value.trim(), rol = $("#eqRol").value, u = S.equipo.filter(function (x) { return x.dni === dni; })[0];
-  if (!u && !ext) return toast("Elige un usuario o escribe un nombre", "bad");
-  ev.equipo = ev.equipo || []; ev.equipo.push(u ? { dni: u.dni, nombre: u.nombre, rol: rol, cargo: u.cargo } : { dni: $("#eqDni").value.replace(/\D/g, ""), nombre: ext.toUpperCase(), rol: rol });
+  var ev = EV.leerRespuesta(clone(L.evento(EV.id))), x = EV.integranteElegido();
+  if (!x) return toast("Elige un usuario o escribe un nombre", "bad");
+  if (!EV.sumarIntegrante(ev, x)) return toast(x.nombre + " ya está en el equipo", "bad");
   EV.guardarEv(ev, "Integrante agregado");
 };
 EV.quitarEquipo = function (i) { var ev = clone(L.evento(EV.id)); ev.equipo.splice(i, 1); EV.guardarEv(ev, "Integrante retirado"); };
@@ -137,12 +153,12 @@ EV.quitarEquipo = function (i) { var ev = clone(L.evento(EV.id)); ev.equipo.spli
 EV.tabs.evidencias = function (ev) {
   var ed = EV.puede(ev) || (L.enMiArea(ev) && ["Cerrado","Anulado"].indexOf(ev.estado) < 0 && L.rol() !== "COMITE"), evd = ev.evidencias || {}, porCat = {};
   (ev.adjuntos || []).forEach(function (a) { if (!a.doc) (porCat[a.categoria] = porCat[a.categoria] || []).push(a); });
-  var h = '<div class="card"><h3>Declaraciones <small>F-SST-PR-03-04 · el accidentado y los testigos firman con selfie en «Formatos y firmas»</small></h3>' +
+  var h = '<div class="card" data-paso="declaraciones"><h3>Declaraciones <small>F-SST-PR-03-04 · el accidentado y los testigos firman con selfie en «Formatos y firmas»</small></h3>' +
     ((ev.declaraciones || []).length ? ev.declaraciones.map(function (d, i) {
       return '<div class="decl"><div class="flex between"><div><span class="pill info">' + esc(d.tipo) + '</span> <b>' + esc(d.nombre) + '</b> <span class="small muted">' + esc(d.cargo || "") + ' · ' + fFecha(d.fecha) + '</span></div>' +
         '<span class="flex">' + (ed ? '<button class="btn sm" onclick="EV.declaracion(' + i + ')">Editar</button>' : "") + '<a class="btn sm primary" href="#/evento/' + ev.id + '/formatos">🖊 Firmar</a></span></div><p>' + esc(d.relato) + '</p></div>';
     }).join("") : '<div class="callout warn">Registra primero la declaración del trabajador accidentado.</div>') + (ed ? '<button class="btn primary mt" onclick="EV.declaracion()">＋ Registrar declaración</button>' : "") + '</div>';
-  h += '<div class="card"><h3>Lista de evidencias <small>Anexo 02 · las 4P</small></h3><div class="ev4">' + CAT.evidencias.map(function (g) {
+  h += '<div class="card" data-paso="evidencias"><h3>Lista de evidencias <small>Anexo 02 · las 4P</small></h3><div class="ev4">' + CAT.evidencias.map(function (g) {
     return '<div class="ev4-g"><div class="ev4-h">' + g.ic + ' ' + g.g + '</div>' + g.items.map(function (it) {
       var n = (porCat[it] || []).length, on = evd[it] || n;
       return '<div class="ev4-i ' + (on ? "on" : "") + '"><label><input type="checkbox" ' + (on ? "checked" : "") + (ed ? "" : " disabled") + ' onchange="EV.marcarEvid(\'' + esc(it) + '\',this.checked)"> ' + esc(it) + '</label>' +
@@ -207,15 +223,15 @@ EV.tabs.scat = function (ev) {
   function btnSug(k, arr, lbl) { var f = arr.filter(function (c) { return s[k].indexOf(c) < 0; }); return ed && f.length ? '<button class="btn sm" onclick="EV.aplicarSug(\'' + k + '\')">🤖 +' + f.length + ' ' + lbl + '</button>' : ""; }
   var h = '<div class="card mb"><h3>Cadena causal <small>se arma mientras marcas</small><span class="spacer"></span>' + (rg ? '<span class="pill ' + rg.color + '">Riesgo ' + rg.nivel + ' · plazo base ' + rg.plazo + ' días</span>' : "") + '</h3>' + EV.cadenaHTML(s) +
     (ed && s.contactos.length ? '<div class="flex mt"><button class="btn" onclick="EV.cadena()">⚡ Completar la cadena con sugerencias</button><span class="small muted">Genera un borrador que el equipo revisa y ajusta.</span></div>' : "") + '</div>';
-  h += '<div class="scat-block">' + head(1, "Evaluación del potencial de pérdida", "Si no se controla: ¿qué tan grave pudo ser, qué tan probable es que se repita y cuánta gente se expone?", "", s.gravedad && s.probabilidad) +
+  h += '<div class="scat-block" data-paso="scat1">' + head(1, "Evaluación del potencial de pérdida", "Si no se controla: ¿qué tan grave pudo ser, qué tan probable es que se repita y cuánta gente se expone?", "", s.gravedad && s.probabilidad) +
     '<div class="body"><div class="sub-h">Gravedad potencial</div>' + radios("gravedad", "gravedad") + '<div class="sub-h mt">Probabilidad de ocurrencia</div>' + radios("probabilidad", "probabilidad") + '<div class="sub-h mt">Frecuencia de exposición</div>' + radios("exposicion", "exposicion") + '</div></div>';
-  h += '<div class="scat-block">' + head(2, "Tipo de contacto", "Tipo de evento o energía con la que hubo contacto (puede ser más de uno)", "", s.contactos.length) + '<div class="body">' + checks("contactos", "contactos", []) + '</div></div>';
-  h += '<div class="scat-block">' + head(3, "Causas inmediatas", "Actos y condiciones subestándar · ★ = relacionado con el contacto elegido", btnSug("actos", sg.actos, "actos") + btnSug("condiciones", sg.condiciones, "condiciones"), s.actos.length + s.condiciones.length) +
+  h += '<div class="scat-block" data-paso="scat2">' + head(2, "Tipo de contacto", "Tipo de evento o energía con la que hubo contacto (puede ser más de uno)", "", s.contactos.length) + '<div class="body">' + checks("contactos", "contactos", []) + '</div></div>';
+  h += '<div class="scat-block" data-paso="scat3">' + head(3, "Causas inmediatas", "Actos y condiciones subestándar · ★ = relacionado con el contacto elegido", btnSug("actos", sg.actos, "actos") + btnSug("condiciones", sg.condiciones, "condiciones"), s.actos.length + s.condiciones.length) +
     '<div class="body"><div class="sub-h">Actos subestándar</div>' + checks("actos", "actos", sg.actos) + '<div class="sub-h mt">Condiciones subestándar</div>' + checks("condiciones", "condiciones", sg.condiciones) + '</div></div>';
-  h += '<div class="scat-block">' + head(4, "Causas básicas", "Factores personales y del trabajo · ★ = explica las causas inmediatas marcadas", btnSug("fp", sg.fp, "personales") + btnSug("ft", sg.ft, "del trabajo"), s.fp.length + s.ft.length) +
+  h += '<div class="scat-block" data-paso="scat4">' + head(4, "Causas básicas", "Factores personales y del trabajo · ★ = explica las causas inmediatas marcadas", btnSug("fp", sg.fp, "personales") + btnSug("ft", sg.ft, "del trabajo"), s.fp.length + s.ft.length) +
     '<div class="body"><div class="sub-h">Factores personales</div>' + checks("fPersonales", "fp", sg.fp) + '<div class="sub-h mt">Factores del trabajo</div>' + checks("fTrabajo", "ft", sg.ft) + '</div></div>';
   var nacSel = s.nac.map(function (n) { return n.c; });
-  h += '<div class="scat-block">' + head(5, "Falta de control · NAC", "Elemento del programa que falló: P programa inadecuado · S estándar inadecuado · C incumplimiento", ed && sg.nac.filter(function (c) { return nacSel.indexOf(c) < 0; }).length ? '<button class="btn sm" onclick="EV.aplicarSug(\'nac\')">🤖 Marcar sugeridos</button>' : "", s.nac.length) +
+  h += '<div class="scat-block" data-paso="scat5">' + head(5, "Falta de control · NAC", "Elemento del programa que falló: P programa inadecuado · S estándar inadecuado · C incumplimiento", ed && sg.nac.filter(function (c) { return nacSel.indexOf(c) < 0; }).length ? '<button class="btn sm" onclick="EV.aplicarSug(\'nac\')">🤖 Marcar sugeridos</button>' : "", s.nac.length) +
     '<div class="body"><div class="opts one">' + CAT.nac.slice().sort(function (a, b) { return (sg.nac.indexOf(b.c) >= 0) - (sg.nac.indexOf(a.c) >= 0); }).map(function (o) {
       var sel = s.nac.filter(function (n) { return n.c === o.c; })[0], sug = sg.nac.indexOf(o.c) >= 0;
       return '<div class="nac-row"><label class="chk ' + (sel ? "on " : "") + (sug ? "sug" : "") + '"><input type="checkbox" ' + (sel ? "checked" : "") + (ed ? "" : " disabled") + ' onchange="EV.toggleNac(\'' + o.c + '\',this.checked)"><span><span class="code">' + o.c + '</span>' + esc(o.t) + (sug && !sel ? '<span class="star">★ sugerido</span>' : "") + '</span></label>' +

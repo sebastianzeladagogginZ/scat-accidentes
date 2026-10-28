@@ -411,7 +411,12 @@ var App = {
     var mismo = function (u) { var m = String(u || "").match(/#\/evento\/([^/]+)/); return m ? m[1] : null; };
     if (e && e.oldURL && mismo(e.oldURL) && mismo(e.oldURL) === mismo(e.newURL)) { var y = window.scrollY; App._vt = true; App.route(); App._vt = false; window.scrollTo(0, Math.min(y, ($(".tabs") || {}).offsetTop || 0)); return; }
     var vt = document.startViewTransition && !document.hidden && !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) && !$(".modal-bg") && !$(".cmdk-bg");
-    if (vt) { App._vt = true; document.startViewTransition(function () { App.route(); }).finished.then(function () { App._vt = false; }, function () { App._vt = false; }); }
+    if (vt) {
+      // Respaldo: si el navegador demora la transición (ventana inactiva), la pantalla se pinta igual.
+      var hecho = false, pintar = function () { if (hecho) return; hecho = true; App.route(); };
+      App._vt = true; setTimeout(function () { if (!hecho) { App._vt = false; pintar(); } }, 350);
+      try { document.startViewTransition(pintar).finished.then(function () { App._vt = false; }, function () { App._vt = false; }); } catch (e) { App._vt = false; pintar(); }
+    }
     else App.route();
   },
   route: function () {
