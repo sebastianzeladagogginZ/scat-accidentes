@@ -257,17 +257,37 @@ EV.cadena = function () {
   ["actos","condiciones"].forEach(function (k) { if (!s[k].length) s[k] = EV.sugerencias(s)[k].slice(0, 2); });
   ["fp","ft"].forEach(function (k) { if (!s[k].length) s[k] = EV.sugerencias(s)[k].slice(0, 2); });
   if (!s.nac.length) EV.sugerencias(s).nac.slice(0, 3).forEach(function (c) { s.nac.push({ c: c, psc: EV.pscSugerido(s, c) }); });
-  if (!s.causa_raiz) s.causa_raiz = EV.textoCR(s);
+  if (!s.causa_raiz) s.causa_raiz = EV.textoCR(s, L.evento(EV.id));
   toast("Borrador generado: revisa y desmarca lo que no aplique", "ok"); EV.tabs.scat(L.evento(EV.id));
 };
-EV.textoCR = function (s) {
-  var lc = function (t) { return t.charAt(0).toLowerCase() + t.slice(1); }, j = function (l, a) { return (a || []).map(function (c) { return lc(CAT.txt(l, c)); }).join("; "); };
-  var ci = [j("actos", s.actos) ? "el acto: " + j("actos", s.actos) : "", j("condiciones", s.condiciones) ? "la condición: " + j("condiciones", s.condiciones) : ""].filter(String).join("; y ");
-  var cb = [j("fPersonales", s.fp), j("fTrabajo", s.ft)].filter(String).join("; ");
-  var nac = (s.nac || []).map(function (n) { return lc(CAT.txt("nac", n.c)) + " (" + ({ P: "programa inadecuado", S: "estándar inadecuado", C: "incumplimiento del estándar" }[n.psc] || "") + ")"; }).join("; ");
-  return "El evento (" + j("contactos", s.contactos) + ") se produjo por " + (ci || "—") + ". Estas causas inmediatas se originaron en: " + (cb || "—") + ". Falta de control en: " + (nac || "—") + ".";
+/* ---------- Redacción natural de los textos automáticos ---------- */
+EV.min = function (t) {                                              // primera letra en minúscula, salvo siglas (EPP, PETS…)
+  t = String(t || "").trim().replace(/\.$/, ""); var w = t.split(" ")[0];
+  return w.length > 1 && w === w.toUpperCase() ? t : t.charAt(0).toLowerCase() + t.slice(1);
 };
-EV.redactarCR = function () { EV.draft.causa_raiz = EV.textoCR(EV.draft); EV.tabs.scat(L.evento(EV.id)); };
+EV.lista = function (a) {                                            // «a», «a y b», «a, b y c» (con «;» si los ítems ya traen comas)
+  a = (a || []).filter(String); if (a.length < 2) return a[0] || "";
+  var sep = a.some(function (x) { return x.indexOf(",") >= 0; }) ? "; " : ", ";
+  return a.slice(0, -1).join(sep) + (sep === "; " ? "; y " : " y ") + a[a.length - 1];
+};
+EV.textoCR = function (s, ev) {
+  ev = ev || L.evento(EV.id) || {}; s = s || {};
+  var t = function (l, a) { return (a || []).map(function (c) { return EV.min(CAT.txt(l, c)); }); }, o = [];
+  var cont = (s.contactos || []).map(function (c) { return "«" + CAT.txt("contactos", c).replace(/\s*\(.*\)$/, "") + "»"; });
+  var ctx = (ev.tarea ? " durante la tarea de " + EV.min(ev.tarea).replace(/^(el|la|los|las|un|una)\s+/i, "") : "") + (ev.lugar ? " en " + ev.lugar.replace(/\.$/, "") : "");
+  o.push("El evento ocurrió" + (ctx || " durante la jornada") + (cont.length ? " y corresponde " + (cont.length > 1 ? "a los tipos de contacto " : "al tipo de contacto ") + EV.lista(cont) : "") + ".");
+  var ac = t("actos", s.actos), co = t("condiciones", s.condiciones);
+  if (ac.length) o.push("En ese momento se " + (ac.length > 1 ? "presentaron actos inseguros: " : "presentó un acto inseguro: ") + EV.lista(ac) + ".");
+  if (co.length) o.push((ac.length ? (co.length > 1 ? "A esto se sumaron condiciones inseguras: " : "A esto se sumó una condición insegura: ") : (co.length > 1 ? "Se presentaron condiciones inseguras: " : "Se presentó una condición insegura: ")) + EV.lista(co) + ".");
+  var fp = t("fPersonales", s.fp), ft = t("fTrabajo", s.ft);
+  if (fp.length || ft.length) o.push((ac.length || co.length ? "Esto no ocurrió por casualidad. " : "") + (fp.length + ft.length > 1 ? "Como causas de fondo identificamos, " : "Como causa de fondo identificamos, ") +
+    [fp.length ? "en lo personal, " + EV.lista(fp) : "", ft.length ? (fp.length ? "y, " : "") + "en las condiciones de trabajo, " + EV.lista(ft) : ""].filter(String).join(" ") + ".");
+  var g = { P: [], S: [], C: [] }; (s.nac || []).forEach(function (n) { (g[n.psc] || g.P).push(EV.min(CAT.txt("nac", n.c))); });
+  var nac = [g.P.length ? "no había un programa adecuado de " + EV.lista(g.P) : "", g.S.length ? "el estándar de " + EV.lista(g.S) + " existía, pero no era suficiente" : "", g.C.length ? "el estándar de " + EV.lista(g.C) + " existía, pero no se cumplió" : ""].filter(String);
+  if (nac.length) o.push("Desde la gestión, " + (nac.length > 1 ? nac.slice(0, -1).join("; ") + "; y " + nac[nac.length - 1] : nac[0]) + ". Corregir estas faltas de control es lo que evitará que el evento se repita.");
+  return o.length > 1 ? o.join(" ") : "Completa los bloques del análisis SCAT para redactar la causa raíz.";
+};
+EV.redactarCR = function () { var ev = L.evento(EV.id); EV.draft.causa_raiz = EV.textoCR(EV.draft, ev); EV.tabs.scat(ev); };
 EV.guardarScat = function () {
   var ev = clone(L.evento(EV.id)); EV.draft.causa_raiz = $("#scCR").value; ev.scat = clone(EV.draft);
   var r = CAT.riesgo(ev.scat.gravedad, ev.scat.probabilidad, ev.scat.exposicion); ev.riesgo = r ? r.nivel : ""; EV.draft = null;
@@ -390,12 +410,24 @@ EV.tabs.informe = function (ev) {
     '<div class="callout info"><span>🖊</span><div><b>El registro de investigación en PDF se genera en «Formatos y firmas»</b>con los datos de esta pestaña, el análisis SCAT, el plan de acción y las firmas con selfie. <a href="#/evento/' + ev.id + '/formatos">Ir a formatos →</a></div></div>';
 };
 EV.redactarInforme = function () {
-  var ev = L.evento(EV.id), s = ev.scat || {}, rg = CAT.riesgo(s.gravedad, s.probabilidad, s.exposicion), acc = L.accionesDe(ev.id), box = $("#infBox");
+  var ev = L.evento(EV.id), s = ev.scat || {}, rg = CAT.riesgo(s.gravedad, s.probabilidad, s.exposicion), acc = L.accionesDe(ev.id), box = $("#infBox"), dp = L.diasPerdidos(ev.id);
   var set = function (k, v) { var el = $('[data-k="' + k + '"]', box); if (el && !el.value) el.value = v; };
-  set("consecuencias", "Gravedad potencial: " + CAT.txt("gravedad", s.gravedad) + "; probabilidad de repetición: " + CAT.txt("probabilidad", s.probabilidad) + (rg ? " (riesgo " + rg.nivel.toLowerCase() + ")" : "") + ". De no controlarse, el mismo tipo de contacto (" + (s.contactos || []).map(function (c) { return CAT.txt("contactos", c).toLowerCase(); }).join(", ") + ") podría causar lesiones de mayor severidad.");
-  set("impacto", (L.diasPerdidos(ev.id) ? L.diasPerdidos(ev.id) + " día(s) perdido(s) por descanso médico. " : "") + (ev.danos_materiales ? "Daños materiales: " + ev.danos_materiales + ". " : "") + (ev.perdida_estimada ? "Pérdida estimada S/ " + ev.perdida_estimada + "." : ""));
-  set("conclusiones", s.causa_raiz || EV.textoCR(s));
-  set("recomendaciones", acc.length ? acc.map(function (a) { return "• " + a.descripcion + " (" + (a.responsable || "") + ", " + fFecha(a.fecha_compromiso) + ")"; }).join("\n") : "Generar el plan de acción desde el análisis SCAT.");
+  var G = { MAY: "una lesión grave, incapacitante permanente o incluso fatal", SER: "una lesión incapacitante temporal o un daño importante", MEN: "una lesión leve o un daño menor" }[s.gravedad];
+  var P = { ALT: "es muy probable que vuelva a ocurrir", MOD: "el evento podría repetirse ocasionalmente", RAR: "es poco probable que se repita" }[s.probabilidad];
+  var E = { EXT: "muchas personas realizan esta tarea", MOD: "varias personas realizan esta tarea", BAJ: "pocas personas realizan esta tarea" }[s.exposicion];
+  var cont = (s.contactos || []).map(function (c) { return "«" + CAT.txt("contactos", c).replace(/\s*\(.*\)$/, "") + "»"; });
+  set("consecuencias", G ? "Si no se corrigen las causas, un evento similar podría terminar en " + G + ". " + (P ? "Hoy " + P + (E ? " y " + E : "") + ", " : "") +
+    (rg ? "por lo que el riesgo se califica como " + rg.nivel.toLowerCase() + " y las acciones tienen un plazo base de " + rg.plazo + " días." : "") + (cont.length ? " El riesgo de " + EV.lista(cont) + " sigue presente mientras no se apliquen las medidas." : "")
+    : "Completa la evaluación del potencial de pérdida (bloque 1 del SCAT) para describir las consecuencias.");
+  var imp = [];
+  if (dp) imp.push((ev.trabajador ? "El trabajador" : "El personal afectado") + " estuvo " + dp + " día" + (dp > 1 ? "s" : "") + " con descanso médico.");
+  if (ev.danos_materiales) imp.push("Se registraron daños materiales: " + EV.min(ev.danos_materiales) + ".");
+  if (ev.danos_ambientales) imp.push("En las operaciones o el ambiente: " + EV.min(ev.danos_ambientales) + ".");
+  if (ev.perdida_estimada) imp.push("La pérdida económica estimada es de S/ " + fmt(ev.perdida_estimada, 2) + ".");
+  set("impacto", imp.length ? imp.join(" ") : "No se registraron días perdidos ni daños materiales.");
+  set("conclusiones", s.causa_raiz || EV.textoCR(s, ev));
+  set("recomendaciones", acc.length ? "Para evitar que se repita, se recomienda:\n" + acc.map(function (a) { return "• " + String(a.descripcion).replace(/\.$/, "") + (a.responsable ? " (a cargo de " + a.responsable + (a.fecha_compromiso ? ", hasta el " + fFecha(a.fecha_compromiso) : "") + ")" : ""); }).join(".\n") + "."
+    : "Aún no hay plan de acción: genéralo desde el análisis SCAT para completar las recomendaciones.");
   toast("Borrador redactado: revísalo y guarda", "ok");
 };
 EV.guardarInforme = function () { var ev = clone(L.evento(EV.id)); ev.investigacion = leerForm($("#infBox"), [{ k: "consecuencias" }, { k: "impacto" }, { k: "conclusiones" }, { k: "recomendaciones" }], ev.investigacion || {}); EV.guardarEv(ev, "Informe guardado"); };
