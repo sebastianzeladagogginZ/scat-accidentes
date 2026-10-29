@@ -242,26 +242,24 @@ EV.tabs.scat = function (ev) {
     var items = CAT[lista].slice().sort(function (a, b) { return (sugs.indexOf(b.c) >= 0) - (sugs.indexOf(a.c) >= 0); });
     return '<div class="opts">' + items.map(function (o) {
       var on = s[k].indexOf(o.c) >= 0, sug = sugs.indexOf(o.c) >= 0;
-      return '<label class="chk ' + (on ? "on " : "") + (sug ? "sug" : "") + '"><input type="checkbox" ' + (on ? "checked" : "") + (ed ? "" : " disabled") + ' onchange="EV.toggle(\'' + k + '\',\'' + o.c + '\',this.checked)"><span><span class="code">' + o.c + '</span>' + esc(o.t) + (sug && !on ? '<span class="star">★ sugerido</span>' : "") + '</span></label>';
+      return '<label class="chk ' + (on ? "on " : "") + (sug ? "sug" : "") + '"><input type="checkbox" ' + (on ? "checked" : "") + (ed ? "" : " disabled") + ' onchange="EV.toggle(\'' + k + '\',\'' + o.c + '\',this.checked)"><span><span class="code">' + o.c + '</span>' + esc(o.t) + (sug && !on ? '<span class="star">★ relacionado</span>' : "") + '</span></label>';
     }).join("") + '</div>';
   }
   function head(n, t, sub, extra, ok) { return '<header><span class="n ' + (ok ? "ok" : "") + '">' + (ok ? "✓" : n) + '</span><div><b>' + t + '</b><small>' + sub + '</small></div><span class="spacer"></span>' + (extra || "") + '</header>'; }
-  function btnSug(k, arr, lbl) { var f = arr.filter(function (c) { return s[k].indexOf(c) < 0; }); return ed && f.length ? '<button class="btn sm" onclick="EV.aplicarSug(\'' + k + '\')">🤖 +' + f.length + ' ' + lbl + '</button>' : ""; }
   var h = '<div class="card mb"><h3>Cadena causal <small>se arma mientras marcas</small><span class="spacer"></span>' + (rg ? '<span class="pill ' + rg.color + '">Riesgo ' + rg.nivel + ' · plazo base ' + rg.plazo + ' días</span>' : "") + '</h3>' + EV.cadenaHTML(s) +
-    (ed && s.contactos.length ? '<div class="flex mt"><button class="btn" onclick="EV.cadena()">⚡ Completar la cadena con sugerencias</button><span class="small muted">Genera un borrador que el equipo revisa y ajusta.</span></div>' : "") +
     (ed ? '<div class="flex mt"><button class="btn ia-btn" style="margin:0" onclick="AN.abrir()">' + (IA.visible() ? "✨ Análisis integral: IA + histórico" : "📊 Análisis integral con histórico") + '</button><span class="small muted">Une ' + (IA.visible() ? "la IA, " : "") + 'el relato, las relaciones SCAT y los casos parecidos para proponer todas las alternativas; tú confirmas cada una.</span></div>' : "") + '</div>';
   h += '<div class="scat-block" data-paso="scat1">' + head(1, "Evaluación del potencial de pérdida", "Si no se controla: ¿qué tan grave pudo ser, qué tan probable es que se repita y cuánta gente se expone?", "", s.gravedad && s.probabilidad) +
     '<div class="body"><div class="sub-h">Gravedad potencial</div>' + radios("gravedad", "gravedad") + '<div class="sub-h mt">Probabilidad de ocurrencia</div>' + radios("probabilidad", "probabilidad") + '<div class="sub-h mt">Frecuencia de exposición</div>' + radios("exposicion", "exposicion") + '</div></div>';
   h += '<div class="scat-block" data-paso="scat2">' + head(2, "Tipo de contacto", "Tipo de evento o energía con la que hubo contacto (puede ser más de uno)", "", s.contactos.length) + '<div class="body">' + checks("contactos", "contactos", []) + '</div></div>';
-  h += '<div class="scat-block" data-paso="scat3">' + head(3, "Causas inmediatas", "Actos y condiciones subestándar · ★ = relacionado con el contacto elegido", btnSug("actos", sg.actos, "actos") + btnSug("condiciones", sg.condiciones, "condiciones"), s.actos.length + s.condiciones.length) +
+  h += '<div class="scat-block" data-paso="scat3">' + head(3, "Causas inmediatas", "Actos y condiciones subestándar · ★ = relacionado con el contacto elegido", "", s.actos.length + s.condiciones.length) +
     '<div class="body"><div class="sub-h">Actos subestándar</div>' + checks("actos", "actos", sg.actos) + '<div class="sub-h mt">Condiciones subestándar</div>' + checks("condiciones", "condiciones", sg.condiciones) + '</div></div>';
-  h += '<div class="scat-block" data-paso="scat4">' + head(4, "Causas básicas", "Factores personales y del trabajo · ★ = explica las causas inmediatas marcadas", btnSug("fp", sg.fp, "personales") + btnSug("ft", sg.ft, "del trabajo"), s.fp.length + s.ft.length) +
+  h += '<div class="scat-block" data-paso="scat4">' + head(4, "Causas básicas", "Factores personales y del trabajo · ★ = explica las causas inmediatas marcadas", "", s.fp.length + s.ft.length) +
     '<div class="body"><div class="sub-h">Factores personales</div>' + checks("fPersonales", "fp", sg.fp) + '<div class="sub-h mt">Factores del trabajo</div>' + checks("fTrabajo", "ft", sg.ft) + '</div></div>';
   var nacSel = s.nac.map(function (n) { return n.c; });
-  h += '<div class="scat-block" data-paso="scat5">' + head(5, "Falta de control · NAC", "Elemento del programa que falló: P programa inadecuado · S estándar inadecuado · C incumplimiento", ed && sg.nac.filter(function (c) { return nacSel.indexOf(c) < 0; }).length ? '<button class="btn sm" onclick="EV.aplicarSug(\'nac\')">🤖 Marcar sugeridos</button>' : "", s.nac.length) +
+  h += '<div class="scat-block" data-paso="scat5">' + head(5, "Falta de control · NAC", "Elemento del programa que falló: P programa inadecuado · S estándar inadecuado · C incumplimiento", "", s.nac.length) +
     '<div class="body"><div class="opts one">' + CAT.nac.slice().sort(function (a, b) { return (sg.nac.indexOf(b.c) >= 0) - (sg.nac.indexOf(a.c) >= 0); }).map(function (o) {
       var sel = s.nac.filter(function (n) { return n.c === o.c; })[0], sug = sg.nac.indexOf(o.c) >= 0;
-      return '<div class="nac-row"><label class="chk ' + (sel ? "on " : "") + (sug ? "sug" : "") + '"><input type="checkbox" ' + (sel ? "checked" : "") + (ed ? "" : " disabled") + ' onchange="EV.toggleNac(\'' + o.c + '\',this.checked)"><span><span class="code">' + o.c + '</span>' + esc(o.t) + (sug && !sel ? '<span class="star">★ sugerido</span>' : "") + '</span></label>' +
+      return '<div class="nac-row"><label class="chk ' + (sel ? "on " : "") + (sug ? "sug" : "") + '"><input type="checkbox" ' + (sel ? "checked" : "") + (ed ? "" : " disabled") + ' onchange="EV.toggleNac(\'' + o.c + '\',this.checked)"><span><span class="code">' + o.c + '</span>' + esc(o.t) + (sug && !sel ? '<span class="star">★ relacionado</span>' : "") + '</span></label>' +
         (sel ? '<div class="psc">' + CAT.psc.map(function (p) { return '<button class="' + (sel.psc === p.c ? "on" : "") + '" ' + (ed ? "" : "disabled") + ' title="' + esc(p.t + ": " + p.d) + '" onclick="EV.setPsc(\'' + o.c + '\',\'' + p.c + '\')">' + p.c + '</button>'; }).join("") + '</div>' : '<span></span>') + '</div>';
     }).join("") + '</div></div></div>';
   h += '<div class="card" id="crBox"><h3>Conclusión del análisis</h3><div class="f"><label>Causa raíz / síntesis</label><textarea id="scCR" ' + (ed ? "" : "disabled") + ' placeholder="Resumen de la cadena causal">' + esc(s.causa_raiz || "") + '</textarea></div>' +
@@ -273,20 +271,6 @@ EV.re = function () { if ($("#scCR")) EV.draft.causa_raiz = $("#scCR").value; EV
 EV.toggle = function (k, c, on) { var a = EV.draft[k], i = a.indexOf(c); if (on && i < 0) a.push(c); if (!on && i >= 0) a.splice(i, 1); EV.re(); };
 EV.toggleNac = function (c, on) { EV.draft.nac = EV.draft.nac.filter(function (n) { return n.c !== c; }); if (on) EV.draft.nac.push({ c: c, psc: EV.pscSugerido(EV.draft, c) }); EV.re(); };
 EV.setPsc = function (c, p) { EV.draft.nac.forEach(function (n) { if (n.c === c) n.psc = p; }); EV.re(); };
-EV.aplicarSug = function (k) {
-  var sg = EV.sugerencias(EV.draft);
-  if (k === "nac") sg.nac.forEach(function (c) { if (!EV.draft.nac.some(function (n) { return n.c === c; })) EV.draft.nac.push({ c: c, psc: EV.pscSugerido(EV.draft, c) }); });
-  else sg[k].forEach(function (c) { if (EV.draft[k].indexOf(c) < 0) EV.draft[k].push(c); });
-  EV.re();
-};
-EV.cadena = function () {
-  var s = EV.draft;
-  ["actos","condiciones"].forEach(function (k) { if (!s[k].length) s[k] = EV.sugerencias(s)[k].slice(0, 2); });
-  ["fp","ft"].forEach(function (k) { if (!s[k].length) s[k] = EV.sugerencias(s)[k].slice(0, 2); });
-  if (!s.nac.length) EV.sugerencias(s).nac.slice(0, 3).forEach(function (c) { s.nac.push({ c: c, psc: EV.pscSugerido(s, c) }); });
-  if (!s.causa_raiz) s.causa_raiz = EV.textoCR(s, L.evento(EV.id));
-  toast("Borrador generado: revisa y desmarca lo que no aplique", "ok"); EV.tabs.scat(L.evento(EV.id));
-};
 /* ---------- Redacción natural de los textos automáticos ---------- */
 EV.min = function (t) {                                              // primera letra en minúscula, salvo siglas (EPP, PETS…)
   t = String(t || "").trim().replace(/\.$/, ""); var w = t.split(" ")[0];
