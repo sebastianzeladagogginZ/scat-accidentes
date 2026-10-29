@@ -233,7 +233,7 @@ EV.cadenaHTML = function (s) {
 };
 EV.tabs.scat = function (ev) {
   if (!EV.draft) EV.draft = clone(ev.scat || {});
-  var s = EV.draft, ed = EV.puede(ev); ["contactos","actos","condiciones","fp","ft","nac"].forEach(function (k) { s[k] = s[k] || []; });
+  var s = EV.draft, ed = EV.puede(ev); ["contactos","actos","condiciones","fp","ft","nac"].forEach(function (k) { s[k] = s[k] || []; }); s.guia = s.guia || {};
   var sg = EV.sugerencias(s), rg = CAT.riesgo(s.gravedad, s.probabilidad, s.exposicion);
   function radios(lista, k) {
     return '<div class="radio-cards">' + CAT[lista].map(function (o) { return '<label class="rc ' + (s[k] === o.c ? "on" : "") + '"><input type="radio" name="r_' + k + '" ' + (s[k] === o.c ? "checked" : "") + (ed ? "" : " disabled") + ' onchange="EV.draft.' + k + '=\'' + o.c + '\';EV.re()"><b>' + esc(o.t) + '</b><span>' + esc(o.d || "") + '</span></label>'; }).join("") + '</div>';
@@ -248,6 +248,7 @@ EV.tabs.scat = function (ev) {
   function head(n, t, sub, extra, ok) { return '<header><span class="n ' + (ok ? "ok" : "") + '">' + (ok ? "✓" : n) + '</span><div><b>' + t + '</b><small>' + sub + '</small></div><span class="spacer"></span>' + (extra || "") + '</header>'; }
   var h = '<div class="card mb"><h3>Cadena causal <small>se arma mientras marcas</small><span class="spacer"></span>' + (rg ? '<span class="pill ' + rg.color + '">Riesgo ' + rg.nivel + ' · plazo base ' + rg.plazo + ' días</span>' : "") + '</h3>' + EV.cadenaHTML(s) +
     (ed ? '<div class="flex mt"><button class="btn ia-btn" style="margin:0" onclick="AN.abrir()">' + (AN.usaIA() ? "✨ Análisis integral: IA + histórico" : "📊 Análisis integral con histórico") + '</button><span class="small muted">Une ' + (AN.usaIA() ? "la IA, " : "") + 'el relato, las relaciones SCAT y los casos parecidos para proponer todas las alternativas; tú confirmas cada una.</span></div>' : "") + '</div>';
+  h += AN.guiaHTML(s, ed);
   h += '<div class="scat-block" data-paso="scat1">' + head(1, "Evaluación del potencial de pérdida", "Si no se controla: ¿qué tan grave pudo ser, qué tan probable es que se repita y cuánta gente se expone?", "", s.gravedad && s.probabilidad) +
     '<div class="body"><div class="sub-h">Gravedad potencial</div>' + radios("gravedad", "gravedad") + '<div class="sub-h mt">Probabilidad de ocurrencia</div>' + radios("probabilidad", "probabilidad") + '<div class="sub-h mt">Frecuencia de exposición</div>' + radios("exposicion", "exposicion") + '</div></div>';
   h += '<div class="scat-block" data-paso="scat2">' + head(2, "Tipo de contacto", "Tipo de evento o energía con la que hubo contacto (puede ser más de uno)", "", s.contactos.length) + '<div class="body">' + checks("contactos", "contactos", []) + '</div></div>';

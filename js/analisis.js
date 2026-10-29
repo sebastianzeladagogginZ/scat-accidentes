@@ -7,20 +7,26 @@
 var AN = {
   /* Reglas de campo (texto normalizado: MAYÚSCULAS y sin tildes) → códigos SCAT */
   CLAVES: [
-    [/ESCALERA|ANDAMIO|TECHO|AZOTEA|DESDE .{0,25}METRO|CAYO DE (UNA|LA|EL) ALTURA|EN ALTURA|ARNES|LINEA DE VIDA|LO ALTO DEL POSTE|SUBI\w* (AL|EL|POR EL) POSTE/, ["C03"], "trabajo en altura"],
-    [/(RESBAL\w*|TROPEZ\w*) (EN|CON|POR|SOBRE) |TROPEZ|PISO MOJADO|AL MISMO NIVEL|DESNIVEL|RESBAL\w* Y (SE )?(CAYO|TORCIO)|SE TORCIO EL TOBILLO/, ["C04"], "resbalón o tropiezo"],
-    [/SE LE CAYO|LE CAYO (EL|LA|UN|UNA|ENCIMA|SOBRE)|CAYO (ENCIMA|SOBRE)|SE DESPREND|OBJETO QUE CAYO|ESQUIRLA|SALIO DISPARAD|ATROPELL/, ["C02"], "objeto que cae o sale disparado"],
-    [/CORT(O|ARSE|E) (CON|EL|LA|EN)|SE CORTO|CUTER|CUCHILLA|NAVAJA|TIJERA/, ["C02"], "corte con herramienta"],
-    [/CHOCO|GOLPE\w* (UN|UNA|CONTRA)|SE GOLPEO .{0,25}CONTRA|ROCE|ROZO (UN|UNA|EL|LA|CON)/, ["C01"], "golpe o choque contra algo"],
-    [/ATRAP|APLAST|PRENS|PELLIZC/, ["C05"], "atrapamiento"],
-    [/ELECTRIC|DESCARGA|ENERGIZAD|TENSION ELECTRICA|CORRIENTE|CABLE DE LUZ|RED DE BAJA|RED DE MEDIA/, ["C08"], "electricidad"],
-    [/QUEMAD|CALIENTE|SOLDAD|HORNO DE FUSION|FUSIONADORA/, ["C09"], "calor"],
-    [/LASER|(CONECTOR|PUERTO|FIBRA) (ACTIV|CON SENAL|ENCENDID)|SENAL ACTIVA|LUZ DE LA FIBRA|RADIACION|MIR\w* .{0,30}(FIBRA|CONECTOR|PUERTO)/, ["C10", "K10"], "láser de fibra óptica"],
-    [/QUIMIC|ISOPROPIL|SOLVENTE|ACIDO|GEL DE RELLENO/, ["C11"], "sustancia química"],
-    [/RUIDO/, ["C12"], "ruido"],
-    [/LEVANT|CARGAR|BOBINA|ESPALDA|LUMBAR|SOBREESFUERZO|JALAR|JALANDO|EMPUJ|TIRAR DEL CABLE/, ["C13"], "esfuerzo o carga"],
-    [/CAMARA SUBTERRANEA|BUZON|ESPACIO CONFINADO|GASES|ASFIXI/, ["C14", "K08"], "espacio confinado"],
-    [/PERRO|MORDI|ABEJA|AVISPA|PICADURA|ATAQUE DE/, ["C15"], "animal"],
+    // Contacto: las palabras de contexto (escalera, poste, cargar) pesan 1; las frases del MECANISMO (cómo ocurrió) pesan 3.
+    // Ajustado con relatos reales de SSOMA 2023–2026 (entrenamiento) y validado con otros que no se usaron para ajustar.
+    [/ESCALERA|ANDAMIO|TECHO|AZOTEA|EN ALTURA|ARNES|LINEA DE VIDA|LO ALTO DEL POSTE|PARTE SUPERIOR DEL POSTE/, ["C03"], "trabajo en altura (contexto)", 1],
+    [/(CAE|CAYO|CAYENDO|CAER)\w* (DE|DESDE) (LA|UNA|EL|LO ALTO)\w* ?(ESCALERA|SILLA|POSTE|ALTURA|TECHO|ANDAMIO|BANCO)|DESDE .{0,25}METROS?( DE ALTURA)?|(RESBAL\w*|PIERDE EL EQUILIBRIO|PERDIO EL EQUILIBRIO|PERDIO EL APOYO|SE SUELT\w*|NO PISA BIEN).{0,90}(PELDAN|ESCALERA|SILLA)|PELDAN.{0,60}(RESBAL|CAE|CAYO|CAIGA)|PISA\w* EL VACIO|(DENTRO|INTERIOR) DE (LA|UNA) CAMARA|CAMARA (DESTAPADA|SIN TAPA)|CA(E|YO|IGA) (DE PIE|SENTADO)|PATAS? DE LA SILLA/, ["C03"], "caída desde altura", 3],
+    [/TROPIEZ|TROPEZ|(DOBLA|DOBLO|TORCIO|TUERCE|DOBLE)\w*.{0,20}TOBILLO|TORSION DEL TOBILLO|(PEQUENO )?(HUECO|AGUJERO)|NO PISA FIRME|APOYO INADECUADO DEL PIE|RESBAL\w* (EN|CON|POR|SOBRE) (EL|LA) (PISO|SUELO|VEREDA|PISTA|BARRO|AGUA)|PISO MOJADO|AL MISMO NIVEL/, ["C04"], "resbalón o tropiezo", 3],
+    [/ATRAP|APRISION|PRENS|PELLIZC|SE (LE )?ENRED\w* (EL|SU) DEDO/, ["C05"], "atrapamiento", 3],
+    [/APLAST/, ["C07"], "aplastamiento", 3],
+    [/(TAPA|ESCALERA|PUERTA|ROLA|LOZA|TEMPLADOR|OBJETO|HERRAMIENTA|MATERIAL|BOBINA|TACO|RACK|ALICATE)\w*.{0,70}(IMPACT\w* (SOBRE|EN|CON|CONTRA) (SU|EL|LA)|GOLPE\w* (SU|EL|LA)|CA(E|YO) SOBRE|SE VA HACIA)|SE LE CAYO|LE CAYO (EL|LA|UN|UNA|ENCIMA|SOBRE)|CA(E|YO) (ENCIMA|SOBRE) SU|SE DESPREND|ESQUIRLA|SALIO DISPARAD|ATROPELL|ENGANCH\w*.{0,50}(VEHICULO|CAMION|FURGON|TOLVA)|(VEHICULO|CAMION|FURGON|FURGONETA|TOLVA|MOTOTAXI|CAMIONCITO).{0,90}(ENGANCH|JALA|CHOQUE CON LA FIBRA|CHOCA CON LA FIBRA|IMPACT)/, ["C02"], "golpeado por algo en movimiento", 3],
+    [/CORT(O|ARSE|E) (CON|EL|LA|EN)|SE CORTO|CUTER|CUCHILLA|NAVAJA|TIJERA/, ["C02"], "corte con herramienta", 2],
+    [/(RODILLA|CABEZA|PIERNA|MANO|ESPALDA|CADERA|PIE|DEDO|HOMBRO|COSTILLAS)\w*.{0,40}(IMPACTA|CHOCA|GOLPEA|CHOQUE)\w* (CONTRA|CON)|SE GOLPE(A|O)|IMPACTANDO (SU|EL LADO)|CHOCA DIRECTAMENTE|CHOCANDO|PINCH\w*|ROZA SOBRE|SOBRESAL\w*.{0,50}CORTE|CORTE (EN|SOBRE|ENTRE) (EL|LA|SU) (DEDO|MANO|PALMA)/, ["C01"], "golpe o choque contra algo", 3],
+    [/ROCE|ROZO (UN|UNA|EL|LA|CON)|CHOCO/, ["C01"], "golpe o choque contra algo", 2],
+    [/MEDIA TENSION|ARCO ELECTRICO|ENERGIZAD|DESCARGA ELECTRICA|ELECTROCU|CABLES? ELECTRIC|TENSION ELECTRICA|CABLE DE LUZ|RED DE (BAJA|MEDIA)/, ["C08"], "electricidad", 3],
+    [/QUEMAD|SOLDAD|HORNO DE (FUSION|LA EMPALMADORA)/, ["C09"], "calor", 2],
+    [/LASER|(CONECTOR|PUERTO|FIBRA) (ACTIV|CON SENAL|ENCENDID)|SENAL ACTIVA|LUZ DE LA FIBRA|RADIACION|MIR\w* .{0,30}(FIBRA|CONECTOR|PUERTO)/, ["C10", "K10"], "láser de fibra óptica", 3],
+    [/QUIMIC|ISOPROPIL|SOLVENTE|ACIDO|GEL DE RELLENO/, ["C11"], "sustancia química", 2],
+    [/RUIDO/, ["C12"], "ruido", 2],
+    [/TIRON|SOBREESFUERZO|ESFUERZO (FISICO|BRUSCO)|REALIZ\w* (EL |UN )?ESFUERZO|PUNZON|PUNTADA|LUMBALGIA|GIRO BRUSCO|SUMA DE ESFUERZOS|DOLOR (EN|SOBRE) (LA|EL|SU) (PARTE BAJA|ESPALDA|ZONA LUMBAR|CUELLO|BRAZO)/, ["C13"], "esfuerzo o sobrecarga", 3],
+    [/LEVANT|CARGAR|ESPALDA|LUMBAR|JALAR|EMPUJ|TIRAR DEL CABLE/, ["C13"], "esfuerzo o carga (contexto)", 1],
+    [/ESPACIO CONFINADO|GASES|ASFIXI|SIN VENTILA/, ["C14", "K08"], "espacio confinado", 3],
+    [/PERRO|MORDI|ABEJA|AVISPA|ALACRAN|ARANA|PICADURA|LE PICA|LO PICO|AGUIJON/, ["C15"], "animal", 3],
     [/SIN (CASCO|GUANTES|LENTES|ARNES|EPP|BARBIQUEJO|ZAPATOS)|NO (USABA|LLEVABA|TENIA PUESTO|SE PUSO)( EL| LOS| LAS| SU| SUS)? (CASCO|GUANTES|LENTES|ARNES|EPP|BARBIQUEJO)/, ["A08"], "no usaba el EPP"],
     [/(EPP|GUANTES|ARNES|CASCO|LENTES).{0,25}(MAL ESTADO|DANAD|ROT|VENCID|INADECUAD)/, ["K02"], "EPP en mal estado"],
     [/SIN ATS|NO (HIZO|REALIZO|LLENO|ELABORO)( EL)? ATS|SIN PETS|NO SIGUIO EL PROCEDIMIENTO|OMITI(O|ERON)/, ["A16"], "no siguió el procedimiento"],
@@ -44,7 +50,19 @@ var AN = {
     [/ESTRES|PRESION/, ["FP4"], "presión o estrés"],
     [/SIN SUPERVIS|SUPERVISOR (NO|AUSENTE)|TRABAJABA SOLO|ESTABA SOLO/, ["FT1"], "sin supervisión"],
     [/NO (HAY|HABIA|EXISTE|EXISTIA)( UN)? (PROCEDIMIENTO|PETS)|SIN PROCEDIMIENTO/, ["FT6"], "no había procedimiento"],
-    [/CONTRATISTA|OTRA AREA|NO (SE )?(LE )?(AVISO|AVISARON|COMUNICO|COMUNICARON)/, ["FT9"], "comunicación"]
+    [/CONTRATISTA|OTRA AREA|NO (SE )?(LE )?(AVISO|AVISARON|COMUNICO|COMUNICARON)/, ["FT9"], "comunicación"],
+    // vocabulario de las investigaciones de SSOMA (5 porqués 2023–2026)
+    [/PESE A (EXISTIR|CONTAR CON|CONOCER) (EL |LOS |LA )?(IOS|PETS|PROCEDIMIENTO|INSTRUCTIVO|CONTROL)|NO SE CUMPLIO (EL|CON EL) CONTROL|DESVIACION EN LA EJECUCION/, ["A16"], "no cumplió el control establecido", 3],
+    [/DE MANERA INDIVIDUAL|SIN APOYO DE (SU|UN|OTRO)|DEBE (EJECUTARSE|REALIZARSE|HACERSE) ENTRE DOS|SIN SOLICITAR APOYO/, ["A11", "A16"], "lo hizo solo cuando debía ser entre dos", 2],
+    [/NO CONTABA CON (LOS |LAS )?(ELEMENTOS|HERRAMIENTAS|EQUIPOS)|SIN (LA )?HERRAMIENTA (ADECUADA|NECESARIA)|NO SOLICIT\w* (UNA |LA )?(ESCALERA|HERRAMIENTA) ADECUADA|NO (HABIA|HAY) (UNA )?(CARRETILLA|HERRAMIENTA|ESCALERA)/, ["FT5"], "faltaba la herramienta adecuada", 3],
+    [/(NO SE CUENTA|NO EXISTE|NO SE TIENE|NO TIENE|SIN) (CON )?(EL |UN )?(INSTRUCTIVO|ESTANDAR|IOS)|NO SE (HABIA |HA |TIENE )?(ESTIPULADO|DEFINIDO|ESTABLECIDO)/, ["FT6"], "no hay estándar o instructivo", 3],
+    [/REVISIONES PERIODICAS|MANTENIMIENTO (PREVENTIVO|ADECUADO)|SIN MANTENIMIENTO|FALTA DE MANTENIMIENTO/, ["FT4"], "mantenimiento inadecuado", 2],
+    [/TEMERARI|EXCESO DE VELOCIDAD|MANEJO DEFENSIVO|NO RESPET\w* (EL )?SEMAFORO/, ["A04"], "manejo inseguro", 2],
+    [/(SUPERFICIE|PISO) LISA|LA ESCALERA SE DESLIZ|PERDIO ESTABILIDAD|SIN QUE NADIE LA SUJETE|NADIE (LA )?SUJET|NO (SE )?(HABRIA )?ASEGURADO .{0,25}ESTABILIDAD/, ["A03", "K14"], "escalera sin asegurar o sobre superficie inestable", 2],
+    [/TAPA .{0,25}(RIGIDA|TRABADA|RESISTENCIA)|RIGIDEZ DE LA TAPA/, ["K14"], "tapa de cámara rígida o trabada", 2],
+    [/FALTA DE COORDINACION|COORDINACION .{0,25}INSUFICIENTE|SIN (UNA )?COMUNICACION PREVIA|NO SE REALIZO UNA COMUNICACION/, ["FT9"], "falta de coordinación", 2],
+    [/PUNTO DE ATRAPAMIENTO|LINEA DE FUEGO|EN (LA|SU) TRAYECTORIA|DENTRO DEL AREA DE (DESPLAZAMIENTO|MOVIMIENTO)/, ["A12"], "se ubicó en la línea de fuego", 2],
+    [/NO (FUERON |FUE |SE )?(REPORTAD|REPORTO)\w* OPORTUNAMENTE|SIN REPORTARLO/, ["N05"], "los eventos menores no se reportaron", 2]
   ],
   LISTA: { contactos: "contactos", actos: "actos", condiciones: "condiciones", fp: "fPersonales", ft: "fTrabajo", nac: "nac" },
   TITULO: { contactos: "Tipo de contacto", actos: "Actos subestándar", condiciones: "Condiciones subestándar", fp: "Factores personales", ft: "Factores del trabajo", nac: "Falta de control (NAC)" },
@@ -57,7 +75,10 @@ var AN = {
   /* 🔎 Qué dice el relato (y los datos del evento) */
   claves: function (ev) {
     var t = HIST.n([ev.descripcion, ev.tarea].join(" ")), out = {};
-    AN.CLAVES.forEach(function (r) { if (r[0].test(t)) r[1].forEach(function (c) { if (!out[c]) out[c] = r[2]; }); });
+    AN.CLAVES.forEach(function (r) {
+      var g = new RegExp(r[0].source, "g"), m, pos = -1; while ((m = g.exec(t))) { pos = m.index; if (!m[0].length) g.lastIndex++; }
+      if (pos >= 0) r[1].forEach(function (c) { var w = r[3] || 2; if (!out[c] || out[c].w < w || (out[c].w === w && pos > out[c].pos)) out[c] = { t: r[2], w: w, pos: pos / Math.max(t.length, 1) }; });
+    });
     return out;
   },
 
@@ -102,15 +123,19 @@ var AN = {
     var contReglas = Object.keys(cl).filter(function (c) { return AN.clave(c) === "contactos"; });
     if (ia) ["contactos", "actos", "condiciones", "fp", "ft"].forEach(function (k) { (ia[k] || []).forEach(function (c) {
       add(k, c, k === "contactos" && contReglas.length && contReglas.indexOf(c) < 0 ? 1 : 2, "✨ IA"); }); });
-    Object.keys(cl).forEach(function (c) { add(AN.clave(c), c, 2, "🔎 relato: " + cl[c]); });
+    Object.keys(cl).forEach(function (c) { add(AN.clave(c), c, cl[c].w, "🔎 relato: " + cl[c].t); if (G[AN.clave(c)] && G[AN.clave(c)][c]) G[AN.clave(c)][c].pos = cl[c].w >= 3 ? cl[c].pos : 0; });
+    AN.senalGuia(s, add);
+    var APR = AN.aprendizaje(ev.id);
     var nS = h.conScat.length;
     if (nS >= 3) Object.keys(h.frec).forEach(function (c) { var r = h.frec[c] / nS; if (r >= 0.4) add(AN.clave(c), c, nS >= 5 && r >= 0.6 ? 2 : 1, "📊 en " + h.frec[c] + " de " + nS + " casos parecidos"); });
     var elegir = function (k) {
-      var arr = Object.keys(G[k] || {}).map(function (c) { return G[k][c]; }).filter(function (o) { return !ya(k, o.c); })
-        .sort(function (a, b) { return b.s - a.s; }).slice(0, AN.MAX[k]);
+      Object.keys(G[k] || {}).forEach(function (c) { if (!G[k][c].aj) { G[k][c].aj = 1; AN.ajustar(G[k][c], APR); } });
+      var arr = Object.keys(G[k] || {}).map(function (c) { return G[k][c]; }).filter(function (o) { return !ya(k, o.c) && o.s > 0; })
+        .sort(function (a, b) { return b.s - a.s || (b.pos || 0) - (a.pos || 0); }).slice(0, AN.MAX[k]);
       var tiene = k === "nac" ? s.nac.length : (s[k] || []).length;
       arr.forEach(function (o, i) {
-        if (k === "contactos") { o.on = i === 0 ? !tiene && o.s >= 2 : o.s >= 4 && o.s >= arr[0].s; return; }
+        // contacto: el más fuerte; si empata, el mecanismo que el relato menciona al final (ahí suele estar lo que pasó)
+        if (k === "contactos") { o.on = i === 0 ? !tiene && o.s >= 2 && (arr.length < 2 || o.s > arr[1].s || (o.s >= 3 && (o.pos || 0) > (arr[1].pos || 0))) : false; return; }
         if (k === "fp" || k === "ft") { o.on = o.s >= 3 && o.m.some(function (m) { return m.indexOf("🔗") < 0; }); return; }   // básicas: solo con una señal además del catálogo
         o.on = o.s >= 3 || (i === 0 && !tiene && o.s >= 2) || (k === "nac" && i < 2 && !tiene && o.s >= 1 && bas.length);
       });
@@ -281,6 +306,10 @@ var AN = {
         else if (s[k].indexOf(o.c) < 0) { s[k].push(o.c); n++; }
       });
     });
+    // se guarda lo propuesto para aprender de lo que el equipo conserve, quite o agregue
+    var on = [], lista = [];
+    Object.keys(res.R).forEach(function (k) { res.R[k].forEach(function (o) { lista.push(o.c); if (o.on) on.push(o.c); }); });
+    s.an_prop = { on: on, lista: lista, f: new Date().toISOString().slice(0, 10) };
     if (!s.causa_raiz && n) s.causa_raiz = EV.textoCR(s, L.evento(EV.id));
     toast(n ? n + " elemento(s) marcados: revisa el análisis y guarda." : "No se marcó nada nuevo.", "ok");
     EV.re(); return true;
@@ -383,4 +412,70 @@ AN.medir = function () {
       }).catch(function (e) { fallas.push("Error de la IA: " + (e && e.message || e)); }).then(function () { i++; sig(); });
     })();
   };
+};
+
+/* =====================================================================
+   📝 Preguntas guía de la investigación (4P): cada respuesta comprobada es un hecho,
+   y se traduce directo a códigos SCAT. «malo» = la respuesta que revela el problema.
+   ===================================================================== */
+AN.GUIA = [
+  { g: "Personas", k: "cap", q: "¿El trabajador estaba capacitado para esta tarea?", malo: "no", c: ["FP5"], t: "no estaba capacitado" },
+  { g: "Personas", k: "exp", q: "¿Tenía experiencia haciendo esta tarea?", malo: "no", c: ["FP6"], t: "poca experiencia en la tarea" },
+  { g: "Personas", k: "apu", q: "¿Hubo apuro, presión de tiempo o exceso de confianza?", malo: "si", c: ["FP7"], t: "apuro o exceso de confianza" },
+  { g: "Personas", k: "can", q: "¿Llevaba muchas horas trabajando o estaba cansado?", malo: "si", c: ["FP3"], t: "cansancio o jornada larga" },
+  { g: "Personas", k: "car", q: "¿Levantó o movió carga pesada sin ayuda?", malo: "si", c: ["A11"], t: "manipuló carga sin ayuda" },
+  { g: "Equipos y partes", k: "epp", q: "¿Usaba todo el EPP requerido para la tarea?", malo: "no", c: ["A08"], t: "no usaba el EPP requerido" },
+  { g: "Equipos y partes", k: "epb", q: "¿El EPP estaba completo y en buen estado?", malo: "no", c: ["K02"], t: "EPP incompleto o en mal estado" },
+  { g: "Equipos y partes", k: "her", q: "¿Las herramientas y equipos estaban en buen estado?", malo: "no", c: ["K03"], t: "herramienta o equipo defectuoso" },
+  { g: "Equipos y partes", k: "use", q: "¿Usó la herramienta o el equipo de la forma correcta?", malo: "no", c: ["A07"], t: "uso incorrecto de la herramienta" },
+  { g: "Equipos y partes", k: "fal", q: "¿Faltaba algún equipo o herramienta adecuada para hacerlo seguro?", malo: "si", c: ["FT5"], t: "faltaba el equipo adecuado" },
+  { g: "Equipos y partes", k: "blo", q: "¿Se aseguró el equipo o la energía antes de trabajar (escalera amarrada, bloqueo, tensión cero)?", malo: "no", c: ["A03"], t: "no aseguró el equipo o la energía" },
+  { g: "Entorno", k: "acc", q: "¿El acceso o la estructura estaba en buen estado (poste, escalera, cámara, piso)?", malo: "no", c: ["K14"], t: "acceso o estructura en mal estado" },
+  { g: "Entorno", k: "sen", q: "¿El área estaba señalizada o delimitada?", malo: "no", c: ["A02", "K05"], t: "área sin señalizar" },
+  { g: "Entorno", k: "ord", q: "¿Había orden y limpieza, y el piso estaba seco y despejado?", malo: "no", c: ["K07"], t: "desorden o piso en mal estado" },
+  { g: "Entorno", k: "luz", q: "¿La iluminación era adecuada?", malo: "no", c: ["K12"], t: "iluminación deficiente" },
+  { g: "Procedimientos y gestión", k: "ats", q: "¿Se elaboró el ATS/PETAR y se siguió el procedimiento?", malo: "no", c: ["A16"], t: "no siguió el ATS/PETS" },
+  { g: "Procedimientos y gestión", k: "pet", q: "¿Existe un procedimiento escrito (PETS) para esta tarea?", malo: "no", c: ["FT6"], t: "no hay procedimiento para la tarea" },
+  { g: "Procedimientos y gestión", k: "sup", q: "¿Había supervisión en campo?", malo: "no", c: ["FT1"], t: "sin supervisión en campo" },
+  { g: "Procedimientos y gestión", k: "com", q: "¿Hubo fallas de coordinación o comunicación (otra área, contratista o cliente)?", malo: "si", c: ["FT9"], t: "falla de coordinación" }
+];
+AN.guiaHTML = function (s, ed) {
+  var r = s.guia || {}, n = Object.keys(r).filter(function (k) { return r[k]; }).length, grupos = [];
+  AN.GUIA.forEach(function (x) { if (grupos.indexOf(x.g) < 0) grupos.push(x.g); });
+  var fila = function (x) {
+    var v = r[x.k] || "", mal = v && v === x.malo;
+    var b = function (val, txt) { return '<button type="button" class="' + (v === val ? "on " + (val === x.malo ? "mal" : val === "na" ? "" : "bien") : "") + '" ' + (ed ? "" : "disabled") + ' onclick="AN.responder(\'' + x.k + '\',\'' + val + '\')">' + txt + '</button>'; };
+    return '<div class="gq' + (mal ? " mal" : "") + '"><span>' + esc(x.q) + (mal ? ' <span class="code">' + x.c.join(" ") + '</span>' : "") + '</span><div class="gq-b">' + b("si", "Sí") + b("no", "No") + b("na", "N/A") + '</div></div>';
+  };
+  return '<div class="scat-block" data-paso="guia"><header><span class="n ' + (n >= 8 ? "ok" : "") + '">' + (n >= 8 ? "✓" : "?") + '</span><div><b>Preguntas guía de la investigación (4P)</b><small>Responde con lo que se comprobó en la entrevista y la inspección · ' + n + ' de ' + AN.GUIA.length + ' respondidas. El análisis integral convierte cada respuesta en causas SCAT.</small></div></header>' +
+    '<div class="body">' + grupos.map(function (g) { return '<div class="sub-h">' + g + '</div>' + AN.GUIA.filter(function (x) { return x.g === g; }).map(fila).join(""); }).join("") + '</div></div>';
+};
+AN.responder = function (k, v) { var g = EV.draft.guia = EV.draft.guia || {}; g[k] = g[k] === v ? "" : v; EV.re(); };
+/* señal 📝: respuesta que revela el problema = +3 (basta para premarcar); respuesta que lo descarta = −3 */
+AN.senalGuia = function (s, add) {
+  var r = s.guia || {};
+  AN.GUIA.forEach(function (x) {
+    var v = r[x.k]; if (!v || v === "na") return;
+    x.c.forEach(function (c) { if (v === x.malo) add(AN.clave(c), c, 3, "📝 comprobado: " + x.t); else add(AN.clave(c), c, -3, null); });
+  });
+};
+
+/* =====================================================================
+   📈 Aprendizaje: compara lo que se propuso con lo que el equipo guardó al final.
+   ===================================================================== */
+AN.aprendizaje = function (excluir) {
+  var A = {};
+  S.eventos.forEach(function (e) {
+    var s = e.scat, p = s && s.an_prop; if (!p || e.id === excluir || e.estado === "Anulado") return;
+    var fin = [].concat(s.contactos || [], s.actos || [], s.condiciones || [], s.fp || [], s.ft || [], (s.nac || []).map(function (n) { return n.c; }));
+    (p.on || []).forEach(function (c) { var a = A[c] = A[c] || { p: 0, q: 0, l: 0, ag: 0 }; a.p++; if (fin.indexOf(c) >= 0) a.q++; });
+    (p.lista || []).forEach(function (c) { if ((p.on || []).indexOf(c) >= 0) return; var a = A[c] = A[c] || { p: 0, q: 0, l: 0, ag: 0 }; a.l++; if (fin.indexOf(c) >= 0) a.ag++; });
+  });
+  return A;
+};
+AN.ajustar = function (o, A) {
+  var a = A[o.c]; if (!a) return;
+  if (a.p >= 3 && a.q / a.p < 0.34) { o.s -= 1; o.m.push("📉 el equipo lo quitó en " + (a.p - a.q) + " de " + a.p + " propuestas"); }
+  else if (a.p >= 3 && a.q / a.p >= 0.8) { o.s += 0.5; o.m.push("📈 el equipo lo confirmó en " + a.q + " de " + a.p + " propuestas"); }
+  if (a.l >= 3 && a.ag / a.l >= 0.5) { o.s += 1; o.m.push("📈 el equipo lo agregó en " + a.ag + " de " + a.l + " casos"); }
 };
