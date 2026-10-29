@@ -404,7 +404,10 @@ var App = {
       // Respaldo: si el navegador demora la transición (ventana inactiva), la pantalla se pinta igual.
       var hecho = false, pintar = function () { if (hecho) return; hecho = true; App.route(); };
       App._vt = true; setTimeout(function () { if (!hecho) { App._vt = false; pintar(); } }, 350);
-      try { document.startViewTransition(pintar).finished.then(function () { App._vt = false; }, function () { App._vt = false; }); } catch (e) { App._vt = false; pintar(); }
+      try {
+        var t = document.startViewTransition(pintar), fin = function () { App._vt = false; };
+        t.finished.then(fin, fin); t.ready.catch(fin); if (t.updateCallbackDone) t.updateCallbackDone.catch(fin);   // una transición interrumpida no es un error
+      } catch (e) { App._vt = false; pintar(); }
     }
     else App.route();
   },

@@ -15,7 +15,7 @@ var CONFIG = {
   META_IF: 5, META_IS: 100,  // metas anuales para los medidores del tablero
   SELFIE_PX: 260, FIRMA_W: 420, FIRMA_H: 150
 };
-var APP_VERSION = "V3.9.1";
+var APP_VERSION = "V3.9.2";
 // Solo en el equipo de desarrollo (localhost): ?demo usa los datos de ejemplo y nunca toca la base real.
 if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && /[?&]demo/.test(location.search)) CONFIG.ENDPOINT_URL = "";
 
@@ -236,7 +236,11 @@ var MOCK = (function () {
       if (u.rol === "JEFE" && !alcance(u, ev.area, ev.reportado_por)) return { ok: false, msg: "Evento fuera de tu área." };
       if ((a === "Observado" || a === "Anulado") && !com) return { ok: false, msg: "Indica el motivo." };
       if (a === "En revisión") { var f = validarInv(ev); if (f.length) return { ok: false, error: "incompleto", msg: "Falta completar: " + f.join(", ") + "." }; }
-      if (a === "Cerrado") { var ab = db.acciones.filter(function (x) { return x.evento_id === ev.id && x.estado !== "Cerrada"; }).length; if (ab) return { ok: false, msg: "Hay " + ab + " acción(es) sin cerrar." }; }
+      if (a === "Cerrado") {                                        // igual que el cierre automático: acciones cerradas Y con eficacia verificada
+        var mias = db.acciones.filter(function (x) { return x.evento_id === ev.id; }), ab = mias.filter(function (x) { return x.estado !== "Cerrada"; }).length, sv = mias.filter(function (x) { return x.estado === "Cerrada" && x.eficacia !== "Sí"; }).length;
+        if (ab) return { ok: false, msg: "Hay " + ab + " acción(es) sin cerrar." };
+        if (sv) return { ok: false, msg: "Hay " + sv + " acción(es) cerrada(s) sin eficacia verificada: SSOMA debe verificarla antes de cerrar el evento." };
+      }
       ev.flujo.push({ ts: now(), de: ev.estado, a: a, por: u.nombre, dni: u.dni, rol: u.rol, comentario: com });
       audit(u, "transicion", "eventos", ev.id, ev.estado + " → " + a + (com ? " · " + com : ""));
       ev.estado = a; if (a === "Aprobado") { ev.aprobado_por = u.nombre; ev.aprobado_ts = now(); } if (a === "Cerrado") ev.cerrado_ts = now();
