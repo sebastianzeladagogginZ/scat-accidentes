@@ -1,6 +1,6 @@
 /* =====================================================================
    Análisis integral SCAT: une cuatro señales para proponer las alternativas
-   1) ✨ IA local que lee el relato            2) 🔎 palabras clave del relato (reglas de campo)
+   1) 🧠 cerebro artificial (relato)         2) 🔎 palabras clave del relato (reglas de campo)
    3) 🔗 relaciones causales del catálogo SCAT  4) 📊 histórico de casos parecidos (predictivo)
    Solo se premarca lo que respaldan al menos dos señales: el equipo investigador decide.
    ===================================================================== */
@@ -123,7 +123,7 @@ var AN = {
     // si la IA contradice a las reglas del relato en el contacto, su voto vale la mitad (no puede imponer un error)
     var contReglas = Object.keys(cl).filter(function (c) { return AN.clave(c) === "contactos"; });
     if (ia) ["contactos", "actos", "condiciones", "fp", "ft"].forEach(function (k) { (ia[k] || []).forEach(function (c) {
-      add(k, c, k === "contactos" && contReglas.length && contReglas.indexOf(c) < 0 ? 1 : 2, "✨ IA"); }); });
+      add(k, c, k === "contactos" && contReglas.length && contReglas.indexOf(c) < 0 ? 1 : 2, "🧠 cerebro artificial"); }); });
     Object.keys(cl).forEach(function (c) { add(AN.clave(c), c, cl[c].w, "🔎 relato: " + cl[c].t); if (G[AN.clave(c)] && G[AN.clave(c)][c]) G[AN.clave(c)][c].pos = cl[c].w >= 3 ? cl[c].pos : 0; });
     AN.senalGuia(s, add);
     var APR = AN.aprendizaje(ev.id);
@@ -209,7 +209,7 @@ var AN = {
     }
     IA.preparar().then(function (ok) {
       if (!ok) return;
-      var v = IA.ventana("✨ Análisis integral: IA + reglas SCAT + histórico", function () { return AN.aplicar(v.res); });
+      var v = IA.ventana("🧠 Análisis integral: cerebro artificial + reglas SCAT + histórico", function () { return AN.aplicar(v.res); });
       AN.preguntarIA(ev, { onProg: v.prog }).then(function (r) {
         v.res = AN.calcular(ev, r.ia);
         var o = $("#iaOut", v.m.el); o.hidden = false; AN.pintar(o, v.res);
@@ -276,8 +276,8 @@ var AN = {
     var conf = function (s) { return s >= 4 ? '<span class="an-c alta">confianza alta</span>' : s >= 3 ? '<span class="an-c media">confianza media</span>' : '<span class="an-c">a considerar</span>'; };
     var nom = function (l, c) { return CAT.txt(l, c); };
     var h = res.lectura;
-    if (res.ia && res.ia.explicacion) h += '<p class="mt" style="margin-bottom:0"><b>Lectura de la IA:</b> ' + esc(res.ia.explicacion) + '</p>';
-    if (!res.ia) h += '<p class="small muted mt" style="margin-bottom:0">' + (AN.usaIA() ? "La IA no respondió: la propuesta usa las reglas del relato, las relaciones SCAT y el histórico." : IA.visible() ? "Con el modelo liviano el análisis va sin IA (es más preciso así): usa las reglas del relato, las relaciones SCAT y el histórico." : "Sin IA en este equipo: la propuesta usa las reglas del relato, las relaciones SCAT y el histórico.") + '</p>';
+    if (res.ia && res.ia.explicacion) h += '<p class="mt" style="margin-bottom:0"><b>Lectura del cerebro artificial:</b> ' + esc(res.ia.explicacion) + '</p>';
+    if (!res.ia) h += '<p class="small muted mt" style="margin-bottom:0">' + (AN.usaIA() ? "El cerebro artificial no respondió: la propuesta usa las reglas del relato, las relaciones SCAT y el histórico." : IA.visible() ? "Con el modelo liviano el análisis va sin el cerebro artificial (es más preciso así): usa las reglas del relato, las relaciones SCAT y el histórico." : "Sin cerebro artificial en este equipo: la propuesta usa las reglas del relato, las relaciones SCAT y el histórico.") + '</p>';
     h += '<div class="small muted mt mb">Premarcado = lo respaldan al menos dos señales. Desmarca lo que no corresponda; lo que ya tenías marcado no se toca.</div>';
     h += '<div class="an-g"><h4>Potencial de pérdida</h4>' + (res.potOn ? '<label class="chk on"><input type="checkbox" checked data-pot><span>' +
       ["gravedad", "probabilidad", "exposicion"].map(function (k) { var p = res.pot[k]; return '<span class="an-pot"><b>' + { gravedad: "Gravedad", probabilidad: "Probabilidad", exposicion: "Exposición" }[k] + ':</b> ' + esc(nom(k, p.c)) + ' <span class="small muted">· ' + esc(p.por) + '</span></span>'; }).join("") +
@@ -381,15 +381,15 @@ AN.medirBase = function (casos) {
     EV.draft = AN.vacio(); EV.draft.contactos = cs.e.contactos.slice(); var p = AN.propuesta(AN.calcular(cs.ev, null)); p.contactos = cs.e.contactos.slice(); AN.puntuar(p, cs.e, D);
   });
   EV.draft = guardado;
-  return [["Botón antiguo (solo catálogo)", A, true], ["Análisis integral sin IA, con el contacto ya elegido", D, true], ["Análisis integral sin IA, desde cero", B]];
+  return [["Botón antiguo (solo catálogo)", A, true], ["Análisis integral sin cerebro artificial, con el contacto ya elegido", D, true], ["Análisis integral sin cerebro artificial, desde cero", B]];
 };
 AN.medir = function () {
   var casos = AN.casosPrueba(), nReal = casos.filter(function (c) { return c.fuente === "real"; }).length, conIA = IA.visible();
   var m = modal({ title: "🧪 Precisión de las sugerencias SCAT", wide: true, cancel: "Cerrar",
     body: '<p style="margin-top:0">Compara lo que propone cada método con las causas marcadas de verdad en <b>' + casos.length + ' casos</b>: ' + nReal + ' eventos reales cerrados de la base (cada uno sin contarse a sí mismo) y ' + AN.CASOS.length + ' casos de referencia de fibra óptica.</p>' +
-      (conIA ? '<p class="small muted">La IA se mide con el modelo elegido en «Mi cuenta» (' + esc(IA.MODELOS[IA.conf().modelo].t) + '). En el análisis real solo participa con el modelo 2B.</p>' : "") +
-      '<div class="flex"><button class="btn primary" id="anM1">Medir sin IA (instantáneo)</button>' +
-      (conIA ? '<button class="btn ia-btn" style="margin:0" id="anM2">✨ Medir también con IA (' + (IA.conf().modelo === "2b" ? "≈" + Math.round(casos.length * 5.5 / 60 * 10) / 10 + " h: deja el equipo enchufado y sin suspender" : "≈" + Math.ceil(casos.length * 0.5) + " min") + ')</button>' : "") + '</div><div id="anMR" class="mt"></div>' });
+      (conIA ? '<p class="small muted">El cerebro artificial se mide con el modelo elegido en «Mi cuenta» (' + esc(IA.MODELOS[IA.conf().modelo].t) + '). En el análisis real solo participa con el modelo 2B.</p>' : "") +
+      '<div class="flex"><button class="btn primary" id="anM1">Medir sin cerebro artificial (instantáneo)</button>' +
+      (conIA ? '<button class="btn ia-btn" style="margin:0" id="anM2">🧠 Medir también con el cerebro artificial (' + (IA.conf().modelo === "2b" ? "≈" + Math.round(casos.length * 5.5 / 60 * 10) / 10 + " h: deja el equipo enchufado y sin suspender" : "≈" + Math.ceil(casos.length * 0.5) + " min") + ')</button>' : "") + '</div><div id="anMR" class="mt"></div>' });
   $("#anM1", m.el).onclick = function () { $("#anMR", m.el).innerHTML = AN.tablaMedicion(AN.medirBase(casos)); };
   var b2 = $("#anM2", m.el);
   if (b2) b2.onclick = function () {
@@ -399,18 +399,18 @@ AN.medir = function () {
       if (!document.body.contains(box)) { EV.draft = guardado; return; }          // se cerró la ventana
       if (i >= casos.length) {
         EV.draft = guardado;
-        box.innerHTML = AN.tablaMedicion(filas.concat([["✨ Análisis integral con IA (" + esc(IA.MODELOS[IA.conf().modelo].t) + ")", C]])) +
-          (fallas.length ? '<details class="mt"><summary class="small">La IA eligió mal el contacto en ' + fallas.length + ' caso(s)</summary><ul class="small">' + fallas.map(function (f) { return "<li>" + esc(f) + "</li>"; }).join("") + "</ul></details>" : "");
+        box.innerHTML = AN.tablaMedicion(filas.concat([["🧠 Análisis integral con cerebro artificial (" + esc(IA.MODELOS[IA.conf().modelo].t) + ")", C]])) +
+          (fallas.length ? '<details class="mt"><summary class="small">El cerebro artificial eligió mal el contacto en ' + fallas.length + ' caso(s)</summary><ul class="small">' + fallas.map(function (f) { return "<li>" + esc(f) + "</li>"; }).join("") + "</ul></details>" : "");
         b2.disabled = false; $("#anM1", m.el).disabled = false; return;
       }
       var cs = casos[i];
-      box.innerHTML = '<div class="ia-est"><span class="spin-b ia-spin"></span><span>Caso ' + (i + 1) + " de " + casos.length + " con IA…</span></div>";
+      box.innerHTML = '<div class="ia-est"><span class="spin-b ia-spin"></span><span>Caso ' + (i + 1) + " de " + casos.length + " con el cerebro artificial…</span></div>";
       EV.draft = AN.vacio();
       AN.preguntarIA(cs.ev, {}).then(function (r) {
         EV.draft = AN.vacio(); AN.puntuar(AN.propuesta(AN.calcular(cs.ev, r.ia)), cs.e, C);
         if (r.ia.contactos.length && !r.ia.contactos.some(function (c) { return cs.e.contactos.indexOf(c) >= 0; }))
           fallas.push(String(cs.ev.descripcion).slice(0, 70) + "… → IA: " + r.ia.contactos.join(", ") + " · correcto: " + cs.e.contactos.join(", "));
-      }).catch(function (e) { fallas.push("Error de la IA: " + (e && e.message || e)); }).then(function () { i++; sig(); });
+      }).catch(function (e) { fallas.push("Error del cerebro artificial: " + (e && e.message || e)); }).then(function () { i++; sig(); });
     })();
   };
 };
