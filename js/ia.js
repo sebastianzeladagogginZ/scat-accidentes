@@ -29,15 +29,16 @@ var IA = {
   cargar: function (onProg) {
     if (IA.pipe) return Promise.resolve(IA.pipe);
     if (IA.cargando) return IA.cargando;
-    var m = IA.MODELOS[IA.conf().modelo], archivos = {};
+    var m = IA.MODELOS[IA.conf().modelo], archivos = {}, fuente = null;
+    IA.fase = "Abriendo el motor de IA…"; IA.origen = "red";
     // Durante la carga: reintenta las descargas que se cortan (wifi inestable) y recuerda qué archivo falló, para informarlo.
     var fetchOriginal = window.fetch, restaurar = function () { window.fetch = fetchOriginal; };
     var esperar = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
     var fallo = function (url, e, n) {
       var corto = url.replace(/^https?:\/\//, "").split("?")[0].replace(/\/resolve\/main\//, "/…/").slice(0, 90);
       var err = new Error(IA.conf().carpeta
-        ? "El modelo no está guardado en este navegador y la red no deja descargarlo. Ve a «Mi cuenta → 📁 Cargar modelo desde carpeta» y elige otra vez la carpeta del modelo."
-        : "No se pudo descargar «" + corto + "» tras " + n + " intentos (" + (e && e.message || e) + "). Revisa tu conexión o si un bloqueador o el filtro de la red bloquea huggingface.co / hf.co.");
+        ? "El modelo no está guardado en este equipo y la red no deja descargarlo. Ve a «Mi cuenta → 📁 Cargar modelo desde carpeta» y elige otra vez la carpeta del modelo."
+        : "No se pudo descargar «" + corto + "» (" + (e && e.message || e) + "). Si la red de la oficina bloquea Hugging Face, baja la carpeta del modelo en otra red y úsala con «Mi cuenta → 📁 Cargar modelo desde carpeta».");
       err.archivo = url; return err;
     };
     // Una conexión que se congela (sin error) se corta a los «ms» y cuenta como intento fallido.
@@ -53,15 +54,15 @@ var IA = {
       var total = 0;
       var trozo = function (desde, intento) {
         var hasta = total ? Math.min(desde + PARTE, total) - 1 : desde + PARTE - 1;
-        return conLimite(url, { Range: "bytes=" + desde + "-" + hasta }, 90000, function (r) {
+        return conLimite(url, { Range: "bytes=" + desde + "-" + hasta }, 60000, function (r) {
           if (desde === 0 && r.status === 416) return fetchOriginal(url).then(function (s) { return { completo: s }; });   // archivo vacío
           if (desde === 0 && r.status !== 206) return { completo: r };               // sin partes, o 404 de un archivo opcional: tal cual
           if (r.status !== 206) throw new Error("HTTP " + r.status);
           if (!total) total = +String(r.headers.get("content-range") || "").split("/")[1] || 0;
           return r.arrayBuffer().then(function (b) { return { datos: new Uint8Array(b), tipo: r.headers.get("content-type") }; });
         }).catch(function (e) {
-          if (intento < 6) return esperar(1500 * intento).then(function () { return trozo(desde, intento + 1); });
-          throw fallo(url, e, 6);
+          if (intento < 4) return esperar(1500 * intento).then(function () { return trozo(desde, intento + 1); });
+          throw fallo(url, e, 4);
         });
       };
       return trozo(0, 1).then(function (p) {
@@ -80,8 +81,8 @@ var IA = {
     };
     window.fetch = function (u, o) {
       var url = String(u && u.url || u), metodo = String(o && o.method || u && u.method || "GET").toUpperCase();
-      if (metodo === "GET" && IA.carpeta && /huggingface\.co|hf\.co/.test(url)) {         // modelo elegido desde una carpeta del equipo: sin internet
-        var f = IA.carpeta[url.split("?")[0].split("/").pop()];
+      if (metodo === "GET" && fuente && /huggingface\.co|hf\.co/.test(url)) {           // modelo guardado en este equipo: sin internet
+        var f = fuente[url.split("?")[0].split("/").pop()];
         return Promise.resolve(f ? new Response(f, { status: 200, headers: { "content-length": String(f.size), "content-type": "application/octet-stream" } })
                                  : new Response("", { status: 404 }));
       }
@@ -92,9 +93,9 @@ var IA = {
           if (!r0) return porPartes(url);
           var n = 0;                                                                      // consulta corta (¿existe? ¿cuánto pesa?)
           return (function prueba() {
-            return conLimite(url, { Range: r0 }, 20000, function (r) { return r; }).catch(function (e) {
-              if (++n < 3) return esperar(1500 * n).then(prueba);
-              throw fallo(url, e, 3);
+            return conLimite(url, { Range: r0 }, 15000, function (r) { return r; }).catch(function (e) {
+              if (++n < 2) return esperar(1500).then(prueba);
+              throw fallo(url, e, 2);
             });
           })();
         });
@@ -107,7 +108,11 @@ var IA = {
         });
       })();
     };
-    IA.cargando = import(IA.LIB).then(function (T) {
+    IA.cargando = (IA.carpeta ? Promise.resolve(IA.carpeta) : IA.local()).then(function (map) {
+      fuente = map; if (map) IA.origen = "local";
+      return import(IA.LIB);
+    }).then(function (T) {
+      IA.fase = fuente ? "Cargando el modelo guardado en este equipo…" : "Buscando el modelo en internet…";
       IA.T = T; T.env.allowLocalModels = false;
       // El motor se importa directo desde jsdelivr (permitido por la CSP); con la caché de wasm lo haría desde un blob:, que la CSP bloquea.
       T.env.useWasmCache = false;
@@ -115,9 +120,10 @@ var IA = {
       return T.pipeline("text-generation", m.id, { dtype: "q4f16", device: "webgpu",
         progress_callback: function (p) {
           if (p.status === "progress" && p.total) { archivos[p.file] = [p.loaded || 0, p.total]; var a = 0, b = 0; for (var f in archivos) { a += archivos[f][0]; b += archivos[f][1]; } onProg && onProg(Math.round(a / b * 100), b); }
+          if (p.status === "done" && /decoder/.test(p.file || "")) IA.fase = "Preparando la tarjeta gráfica (la primera vez de cada sesión tarda más)…";
           if (p.status === "ready") onProg && onProg(100, 0);
         } });
-    }).then(function (pipe) { restaurar(); IA.pipe = pipe; IA.cargando = null; return pipe; })
+    }).then(function (pipe) { restaurar(); IA.pipe = pipe; IA.cargando = null; IA.fase = "Leyendo el relato…"; return pipe; })
       .catch(function (e) { restaurar(); IA.cargando = null; console.error("[IA] carga del modelo:", e); throw e; });
     return IA.cargando;
   },
@@ -125,7 +131,7 @@ var IA = {
   generar: function (mensajes, o) {
     o = o || {};
     return IA.cargar(o.onProg).then(function (pipe) {
-      var txt = "", t0 = performance.now(), n = 0;
+      var txt = "", t0 = performance.now(), n = 0; IA.fase = "Leyendo el relato…";
       var streamer = new IA.T.TextStreamer(pipe.tokenizer, { skip_prompt: true, skip_special_tokens: true,
         callback_function: function (t) { txt += t; n++; o.onToken && o.onToken(IA.limpiar(txt)); } });
       return pipe(mensajes, { max_new_tokens: o.max || 320, do_sample: false, repetition_penalty: 1.05, streamer: streamer, tokenizer_encode_kwargs: { enable_thinking: false } })
@@ -158,12 +164,17 @@ var IA = {
         '<div class="ia-out" id="iaOut" hidden></div><div class="ia-nota" id="iaNota" hidden>✨ Borrador generado por IA en este equipo · revísalo antes de guardar</div>',
       onOk: function () { return alAplicar ? alAplicar(m) : true; } });
     $("[data-ok]", m.el).disabled = true;
+    var t0 = Date.now(), libre = true, tic = setInterval(function () {        // muestra en qué paso va y cuánto lleva
+      var e = $("#iaEstT", m.el); if (!e) return clearInterval(tic);
+      if (libre) e.textContent = (IA.fase || "Preparando el asistente…") + " · " + Math.round((Date.now() - t0) / 1000) + " s";
+    }, 500);
     return {
       m: m,
-      prog: function (p, total) { var w = $("#iaBarW", m.el); if (!w) return; w.hidden = p >= 100; $("#iaBar", m.el).style.width = p + "%"; $("#iaEstT", m.el).textContent = p >= 100 ? "Pensando…" : "Descargando el modelo (solo la primera vez): " + p + "%" + (total ? " de " + fmt(total / 1e9, 1) + " GB" : ""); },
-      texto: function (t) { var o = $("#iaOut", m.el); if (!o) return; o.hidden = false; o.textContent = t; $("#iaEstT", m.el).textContent = "Escribiendo…"; },
-      fin: function (r) { var e = $("#iaEst", m.el); if (!e) return; e.innerHTML = "✓ Listo en " + fmt(r.segundos, 1) + " s · " + fmt(r.tps, 1) + " palabras/s aprox."; $("#iaNota", m.el).hidden = false; $("[data-ok]", m.el).disabled = false; },
-      error: function (err) { var e = $("#iaEst", m.el); if (e) e.innerHTML = '<span class="t-bad">No se pudo usar el asistente en este equipo.</span> <span class="small muted">' + esc(String(err && err.message || err).slice(0, 420)) + '</span>'; }
+      prog: function (p, total) { var w = $("#iaBarW", m.el); if (!w) return; w.hidden = p >= 100; $("#iaBar", m.el).style.width = p + "%"; libre = p >= 100;
+        if (!libre) $("#iaEstT", m.el).textContent = (IA.origen === "local" ? "Cargando el modelo en memoria: " : "Descargando el modelo (solo la primera vez): ") + p + "%" + (total ? " de " + fmt(total / 1e9, 1) + " GB" : ""); },
+      texto: function (t) { var o = $("#iaOut", m.el); if (!o) return; libre = false; o.hidden = false; o.textContent = t; $("#iaEstT", m.el).textContent = "Escribiendo…"; },
+      fin: function (r) { clearInterval(tic); var e = $("#iaEst", m.el); if (!e) return; e.innerHTML = "✓ Listo en " + fmt(r.segundos, 1) + " s · " + fmt(r.tps, 1) + " palabras/s aprox."; $("#iaNota", m.el).hidden = false; $("[data-ok]", m.el).disabled = false; },
+      error: function (err) { clearInterval(tic); var e = $("#iaEst", m.el); if (e) e.innerHTML = '<span class="t-bad">No se pudo usar el asistente en este equipo.</span> <span class="small muted">' + esc(String(err && err.message || err).slice(0, 420)) + '</span>'; }
     };
   },
 
@@ -259,6 +270,32 @@ var IA = {
         '<p class="small muted mt">¿La red bloquea la descarga? Baja los archivos del modelo en otra computadora, cópialos a una carpeta de este equipo y elígela aquí. Después de la primera carga queda guardado en el navegador.</p>' : "") + '</div>';
   },
   NECESARIOS: ["config.json", "generation_config.json", "tokenizer.json", "tokenizer_config.json", "embed_tokens_q4f16.onnx", "embed_tokens_q4f16.onnx_data", "decoder_model_merged_q4f16.onnx", "decoder_model_merged_q4f16.onnx_data"],
+  /* Copia del modelo en el almacenamiento privado del navegador (persistente, sin permisos ni internet). */
+  dirLocal: function (crear) {
+    if (!navigator.storage || !navigator.storage.getDirectory) return Promise.reject(new Error("Este navegador no permite guardar el modelo"));
+    return navigator.storage.getDirectory().then(function (r) { return r.getDirectoryHandle("modelo-" + IA.conf().modelo, { create: !!crear }); });
+  },
+  local: function () {                                                // {nombre: File} si la copia está completa; si no, null
+    return IA.dirLocal(false).then(function (dir) {
+      return dir.getFileHandle("listo").then(function () {
+        var mapa = {};
+        return Promise.all(IA.NECESARIOS.map(function (n) { return dir.getFileHandle(n).then(function (h) { return h.getFile(); }).then(function (f) { mapa[n] = f; }); })).then(function () { return mapa; });
+      });
+    }).catch(function () { return null; });
+  },
+  guardarLocal: function (mapa) {
+    try { navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+    return IA.dirLocal(true).then(function (dir) {
+      return dir.removeEntry("listo").catch(function () {}).then(function () {
+        return IA.NECESARIOS.reduce(function (p, n, i) {
+          return p.then(function () {
+            loading(true, "Guardando el modelo en este equipo (" + (i + 1) + " de " + IA.NECESARIOS.length + ")…");
+            return dir.getFileHandle(n, { create: true }).then(function (h) { return h.createWritable(); }).then(function (w) { return mapa[n].stream().pipeTo(w); });
+          });
+        }, Promise.resolve());
+      }).then(function () { return dir.getFileHandle("listo", { create: true }); });
+    });
+  },
   elegirCarpeta: function (inp) {
     var mapa = {};
     Array.prototype.forEach.call(inp.files || [], function (f) { mapa[f.name] = f; });
@@ -267,7 +304,8 @@ var IA = {
     if (faltan.length) { toast("Faltan archivos en la carpeta: " + faltan.join(", "), "bad"); return; }
     IA.guardar("modelo", mapa["decoder_model_merged_q4f16.onnx_data"].size > 800e6 ? "2b" : "08b");   // 2B ≈ 1,1 GB · 0.8B ≈ 0,4 GB
     IA.carpeta = mapa; IA.pipe = null; IA.guardar("carpeta", true);
-    toast("Modelo encontrado en la carpeta. Cargando…", "ok");
-    IA.probar();
+    IA.guardarLocal(mapa).then(function () { loading(false); toast("Modelo guardado en este equipo: ya no necesitarás la carpeta ni internet.", "ok"); },
+      function (e) { loading(false); console.error("[IA] guardar modelo:", e); toast("Se usará la carpeta solo en esta sesión (no se pudo guardar: " + (e && e.message || e) + ").", "bad"); })
+      .then(function () { IA.probar(); });
   }
 };
