@@ -32,14 +32,51 @@ var IA = {
     var m = IA.MODELOS[IA.conf().modelo], archivos = {};
     // Durante la carga: reintenta las descargas que se cortan (wifi inestable) y recuerda qué archivo falló, para informarlo.
     var fetchOriginal = window.fetch, restaurar = function () { window.fetch = fetchOriginal; };
-    window.fetch = function (u, o) {
-      var url = String(u && u.url || u), intento = 0;
+    var esperar = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+    var fallo = function (url, e, n) {
       var corto = url.replace(/^https?:\/\//, "").split("?")[0].replace(/\/resolve\/main\//, "/…/").slice(0, 90);
+      var err = new Error("No se pudo descargar «" + corto + "» tras " + n + " intentos (" + (e && e.message || e) + "). Revisa tu conexión o si un bloqueador o el filtro de la red bloquea huggingface.co / hf.co.");
+      err.archivo = url; return err;
+    };
+    // Los archivos del modelo se bajan por partes de 16 MB: si la conexión se corta a mitad, solo se repite esa parte (hasta 6 veces).
+    var PARTE = 16 * 1024 * 1024;
+    var porPartes = function (url) {
+      var total = 0;
+      var trozo = function (desde, intento) {
+        var hasta = total ? Math.min(desde + PARTE, total) - 1 : desde + PARTE - 1;
+        return fetchOriginal(url, { headers: { Range: "bytes=" + desde + "-" + hasta } }).then(function (r) {
+          if (desde === 0 && r.status === 416) return fetchOriginal(url).then(function (s) { return { completo: s }; });   // archivo vacío
+          if (desde === 0 && r.status !== 206) return { completo: r };               // sin partes, o 404 de un archivo opcional: tal cual
+          if (r.status !== 206) throw new Error("HTTP " + r.status);
+          if (!total) total = +String(r.headers.get("content-range") || "").split("/")[1] || 0;
+          return r.arrayBuffer().then(function (b) { return { datos: new Uint8Array(b), tipo: r.headers.get("content-type") }; });
+        }).catch(function (e) {
+          if (intento < 6) return esperar(1500 * intento).then(function () { return trozo(desde, intento + 1); });
+          throw fallo(url, e, 6);
+        });
+      };
+      return trozo(0, 1).then(function (p) {
+        if (p.completo) return p.completo;
+        if (!total) total = p.datos.length;
+        var pos = 0, siguiente = p;
+        var cuerpo = new ReadableStream({
+          pull: function (c) {
+            if (pos >= total) { c.close(); return; }
+            var t = siguiente ? Promise.resolve(siguiente) : trozo(pos, 1); siguiente = null;
+            return t.then(function (q) { if (!q.datos.length) throw fallo(url, "respuesta vacía", 6); pos += q.datos.length; c.enqueue(q.datos); if (pos >= total) c.close(); });
+          }
+        });
+        return new Response(cuerpo, { status: 200, headers: { "content-length": String(total), "content-type": p.tipo || "application/octet-stream" } });
+      });
+    };
+    window.fetch = function (u, o) {
+      var url = String(u && u.url || u), metodo = String(o && o.method || u && u.method || "GET").toUpperCase();
+      if (metodo === "GET" && /huggingface\.co|hf\.co/.test(url)) return porPartes(url);
+      var intento = 0;
       return (function prueba() {
         return fetchOriginal(u, o).catch(function (e) {
-          if (++intento < 4) return new Promise(function (r) { setTimeout(r, 1500 * intento); }).then(prueba);
-          var err = new Error("No se pudo descargar «" + corto + "» tras 4 intentos (" + (e && e.message || e) + "). Revisa tu conexión o si un bloqueador o el filtro de la red bloquea huggingface.co / hf.co.");
-          err.archivo = url; throw err;
+          if (++intento < 4) return esperar(1500 * intento).then(prueba);
+          throw fallo(url, e, 4);
         });
       })();
     };
