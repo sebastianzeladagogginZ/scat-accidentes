@@ -131,7 +131,7 @@ var IA = {
   generar: function (mensajes, o) {
     o = o || {};
     return IA.cargar(o.onProg).then(function (pipe) {
-      var txt = "", t0 = performance.now(), n = 0; IA.fase = "Leyendo el relato…";
+      var txt = "", t0 = performance.now(), n = 0; IA.fase = o.fase || "Leyendo el relato…";
       var streamer = new IA.T.TextStreamer(pipe.tokenizer, { skip_prompt: true, skip_special_tokens: true,
         callback_function: function (t) { txt += t; n++; o.onToken && o.onToken(IA.limpiar(txt)); } });
       return pipe(mensajes, { max_new_tokens: o.max || 320, do_sample: false, repetition_penalty: 1.05, streamer: streamer, tokenizer_encode_kwargs: { enable_thinking: false } })
@@ -232,7 +232,8 @@ var IA = {
         '<div class="flex mt"><button class="btn primary" onclick="IA.probar()">✨ Probar velocidad en este equipo</button>' +
         '<button class="btn ghost" onclick="document.getElementById(\'iaCarpeta\').click()">📁 Cargar modelo desde carpeta</button>' +
         '<input type="file" id="iaCarpeta" webkitdirectory multiple hidden onchange="IA.elegirCarpeta(this)"></div>' +
-        '<p class="small muted mt">¿La red bloquea la descarga? Baja los archivos del modelo en otra computadora, cópialos a una carpeta de este equipo y elígela aquí. Después de la primera carga queda guardado en el navegador.</p>' : "") + '</div>';
+        '<p class="small muted mt">¿La red bloquea la descarga? Baja los archivos del modelo en otra computadora, cópialos a una carpeta de este equipo y elígela aquí. Después de la primera carga queda guardado en el navegador.</p>' : "") +
+      '<div class="flex mt"><button class="btn ghost" onclick="AN.medir()">🧪 Medir precisión de las sugerencias SCAT</button></div></div>';
   },
   NECESARIOS: ["config.json", "generation_config.json", "tokenizer.json", "tokenizer_config.json", "embed_tokens_q4f16.onnx", "embed_tokens_q4f16.onnx_data", "decoder_model_merged_q4f16.onnx", "decoder_model_merged_q4f16.onnx_data"],
   /* Copia del modelo en el almacenamiento privado del navegador (persistente, sin permisos ni internet). */

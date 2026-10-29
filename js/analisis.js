@@ -7,15 +7,15 @@
 var AN = {
   /* Reglas de campo (texto normalizado: MAYÚSCULAS y sin tildes) → códigos SCAT */
   CLAVES: [
-    [/ESCALERA|ALTURA|POSTE|TECHO|ANDAMIO|DESDE .{0,20}METRO|ARNES|LINEA DE VIDA|CAYO DE(L| LA| UN)/, ["C03"], "trabajo en altura"],
-    [/RESBAL|TROPEZ|PISO MOJADO|MISMO NIVEL|DESNIVEL|VEREDA|PISADA/, ["C04"], "resbalón o tropiezo"],
-    [/LE CAYO|CAYO (ENCIMA|SOBRE)|SE DESPREND|OBJETO QUE CAYO|HERRAMIENTA CAYO/, ["C02"], "objeto que cae"],
-    [/VEHICULO|MOTO|CAMIONETA|ATROPELL|TRANSITO|CHOQUE VEHICULAR/, ["C02"], "vehículo"],
-    [/SE GOLPEO|GOLPEO CON|CHOCO CON|CONTRA (EL|LA|UN|UNA) /, ["C01"], "golpe contra algo"],
+    [/ESCALERA|ANDAMIO|TECHO|AZOTEA|DESDE .{0,25}METRO|CAYO DE (UNA|LA|EL) ALTURA|EN ALTURA|ARNES|LINEA DE VIDA|LO ALTO DEL POSTE|SUBI\w* (AL|EL|POR EL) POSTE/, ["C03"], "trabajo en altura"],
+    [/(RESBAL\w*|TROPEZ\w*) (EN|CON|POR|SOBRE) |TROPEZ|PISO MOJADO|AL MISMO NIVEL|DESNIVEL|RESBAL\w* Y (SE )?(CAYO|TORCIO)|SE TORCIO EL TOBILLO/, ["C04"], "resbalón o tropiezo"],
+    [/SE LE CAYO|LE CAYO (EL|LA|UN|UNA|ENCIMA|SOBRE)|CAYO (ENCIMA|SOBRE)|SE DESPREND|OBJETO QUE CAYO|ESQUIRLA|SALIO DISPARAD|ATROPELL/, ["C02"], "objeto que cae o sale disparado"],
+    [/CORT(O|ARSE|E) (CON|EL|LA|EN)|SE CORTO|CUTER|CUCHILLA|NAVAJA|TIJERA/, ["C02"], "corte con herramienta"],
+    [/CHOCO|GOLPE\w* (UN|UNA|CONTRA)|SE GOLPEO .{0,25}CONTRA|ROCE|ROZO (UN|UNA|EL|LA|CON)/, ["C01"], "golpe o choque contra algo"],
     [/ATRAP|APLAST|PRENS|PELLIZC/, ["C05"], "atrapamiento"],
     [/ELECTRIC|DESCARGA|ENERGIZAD|TENSION ELECTRICA|CORRIENTE|CABLE DE LUZ|RED DE BAJA|RED DE MEDIA/, ["C08"], "electricidad"],
     [/QUEMAD|CALIENTE|SOLDAD|HORNO DE FUSION|FUSIONADORA/, ["C09"], "calor"],
-    [/LASER|CONECTOR ACTIVO|LUZ DE LA FIBRA|RADIACION|MIRO EL CONECTOR/, ["C10", "K10"], "láser de fibra óptica"],
+    [/LASER|(CONECTOR|PUERTO|FIBRA) (ACTIV|CON SENAL|ENCENDID)|SENAL ACTIVA|LUZ DE LA FIBRA|RADIACION|MIR\w* .{0,30}(FIBRA|CONECTOR|PUERTO)/, ["C10", "K10"], "láser de fibra óptica"],
     [/QUIMIC|ISOPROPIL|SOLVENTE|ACIDO|GEL DE RELLENO/, ["C11"], "sustancia química"],
     [/RUIDO/, ["C12"], "ruido"],
     [/LEVANT|CARGAR|BOBINA|ESPALDA|LUMBAR|SOBREESFUERZO|JALAR|JALANDO|EMPUJ|TIRAR DEL CABLE/, ["C13"], "esfuerzo o carga"],
@@ -24,7 +24,8 @@ var AN = {
     [/SIN (CASCO|GUANTES|LENTES|ARNES|EPP|BARBIQUEJO|ZAPATOS)|NO (USABA|LLEVABA|TENIA PUESTO|SE PUSO)( EL| LOS| LAS| SU| SUS)? (CASCO|GUANTES|LENTES|ARNES|EPP|BARBIQUEJO)/, ["A08"], "no usaba el EPP"],
     [/(EPP|GUANTES|ARNES|CASCO|LENTES).{0,25}(MAL ESTADO|DANAD|ROT|VENCID|INADECUAD)/, ["K02"], "EPP en mal estado"],
     [/SIN ATS|NO (HIZO|REALIZO|LLENO|ELABORO)( EL)? ATS|SIN PETS|NO SIGUIO EL PROCEDIMIENTO|OMITI(O|ERON)/, ["A16"], "no siguió el procedimiento"],
-    [/SIN SENALIZ|NO SENALIZ|SIN CONOS|SIN CINTA|NO DELIMIT/, ["A02", "K05"], "sin señalización"],
+    [/SIN SENALIZ|NO SENALIZ|SIN CONOS|SIN CINTA|NO (SE )?(HABIA )?DELIMIT/, ["A02", "K05"], "sin señalización"],
+    [/SIN VIGIA|SIN GUIA|SIN NADIE QUE (LO|LE) GUI/, ["A02"], "sin vigía"],
     [/APUR|PRISA|PARA TERMINAR RAPIDO|EXCESO DE CONFIANZA|SE CONFIO/, ["FP7"], "apuro o exceso de confianza"],
     [/CORRIENDO|MUY RAPIDO|VELOCIDAD/, ["A04"], "velocidad"],
     [/MAL USO|USO INCORRECTO|USO INADECUAD|IMPROVIS/, ["A07"], "uso incorrecto"],
@@ -35,7 +36,7 @@ var AN = {
     [/ESPACIO REDUCIDO|ESTRECHO|CONGESTIONAD|REDUCIDO/, ["K04"], "espacio reducido"],
     [/SOL INTENSO|MUCHO CALOR|FRIO EXTREMO/, ["K11"], "temperatura extrema"],
     [/SOLO SIN AYUDA|SIN AYUDA|MAS DE 25 ?KG/, ["A11"], "cargó sin ayuda"],
-    [/POSTURA|AGACHAD|FORZAD|INCOMOD/, ["A12"], "postura forzada"],
+    [/POSTURA|AGACHAD|FORZAD/, ["A12"], "postura forzada"],
     [/SIN BLOQUE|LOTO|EQUIPO ENCENDIDO|EN FUNCIONAMIENTO/, ["A03"], "sin bloqueo de energía"],
     [/NO SABIA|NO CONOCIA|SIN CAPACITACION|NO (FUE|HABIA SIDO|ESTABA) CAPACITAD|DESCONOC/, ["FP5"], "falta de capacitación"],
     [/NUEVO EN|PRIMER DIA|SIN EXPERIENCIA|POCA EXPERIENCIA|RECIEN INGRES/, ["FP6"], "poca experiencia"],
@@ -53,7 +54,7 @@ var AN = {
 
   /* 🔎 Qué dice el relato (y los datos del evento) */
   claves: function (ev) {
-    var t = HIST.n([ev.descripcion, ev.tarea, ev.lugar, ev.ambito, ev.naturaleza, ev.parte_cuerpo].join(" ")), out = {};
+    var t = HIST.n([ev.descripcion, ev.tarea].join(" ")), out = {};
     AN.CLAVES.forEach(function (r) { if (r[0].test(t)) r[1].forEach(function (c) { if (!out[c]) out[c] = r[2]; }); });
     return out;
   },
@@ -98,26 +99,35 @@ var AN = {
     if (ia) ["contactos", "actos", "condiciones", "fp", "ft"].forEach(function (k) { (ia[k] || []).forEach(function (c) { add(k, c, 2, "✨ IA"); }); });
     Object.keys(cl).forEach(function (c) { add(AN.clave(c), c, 2, "🔎 relato: " + cl[c]); });
     var nS = h.conScat.length;
-    if (nS) Object.keys(h.frec).forEach(function (c) { var r = h.frec[c] / nS; if (r >= 0.3) add(AN.clave(c), c, r >= 0.6 ? 2 : 1, (nS === 1 ? "📊 marcado en el caso parecido" : "📊 en " + h.frec[c] + " de " + nS + " casos parecidos")); });
+    if (nS >= 3) Object.keys(h.frec).forEach(function (c) { var r = h.frec[c] / nS; if (r >= 0.4) add(AN.clave(c), c, nS >= 5 && r >= 0.6 ? 2 : 1, "📊 en " + h.frec[c] + " de " + nS + " casos parecidos"); });
     var elegir = function (k) {
       var arr = Object.keys(G[k] || {}).map(function (c) { return G[k][c]; }).filter(function (o) { return !ya(k, o.c); })
         .sort(function (a, b) { return b.s - a.s; }).slice(0, AN.MAX[k]);
       var tiene = k === "nac" ? s.nac.length : (s[k] || []).length;
-      arr.forEach(function (o, i) { o.on = o.s >= 3 || (i === 0 && !tiene && o.s >= 2) || (k === "nac" && i < 2 && !tiene && o.s >= 1 && bas.length); });
+      arr.forEach(function (o, i) {
+        if (k === "contactos") { o.on = i === 0 ? !tiene && o.s >= 2 : o.s >= 4 && o.s >= arr[0].s; return; }
+        if (k === "fp" || k === "ft") { o.on = o.s >= 3 && o.m.some(function (m) { return m.indexOf("🔗") < 0; }); return; }   // básicas: solo con una señal además del catálogo
+        o.on = o.s >= 3 || (i === 0 && !tiene && o.s >= 2) || (k === "nac" && i < 2 && !tiene && o.s >= 1 && bas.length);
+      });
       return arr;
     };
     var marcados = function (k, arr) { return (k === "nac" ? s.nac.map(function (n) { return n.c; }) : (s[k] || []).slice()).concat(arr.filter(function (o) { return o.on; }).map(function (o) { return o.c; })); };
-    var R = {}, bas = [];
+    var R = {}, bas = [], inm = [], inmOn = 0;
     // 1) contacto → 2) causas inmediatas típicas de ese contacto
     R.contactos = elegir("contactos");
     marcados("contactos", R.contactos).forEach(function (c) { var x = CAT.get("contactos", c); if (!x) return;
       x.a.forEach(function (a) { add("actos", a, 1, "🔗 típico de " + c); }); x.k.forEach(function (k) { add("condiciones", k, 1, "🔗 típico de " + c); }); });
     R.actos = elegir("actos"); R.condiciones = elegir("condiciones");
     // 3) causas básicas que explican las inmediatas marcadas
-    var inm = marcados("actos", R.actos).concat(marcados("condiciones", R.condiciones)), link = { fp: {}, ft: {} };
+    inm = marcados("actos", R.actos).concat(marcados("condiciones", R.condiciones)); inmOn = inm.length; var link = { fp: {}, ft: {} };
     inm.forEach(function (c) { var x = CAT.get("actos", c) || CAT.get("condiciones", c); if (!x) return;
       x.fp.forEach(function (f) { (link.fp[f] = link.fp[f] || []).push(c); }); x.ft.forEach(function (f) { (link.ft[f] = link.ft[f] || []).push(c); }); });
     ["fp", "ft"].forEach(function (k) { Object.keys(link[k]).forEach(function (f) { add(k, f, Math.min(link[k][f].length, 2), "🔗 explica " + link[k][f].slice(0, 3).join(", ")); }); });
+    // las causas inmediatas «a considerar» (sin marcar) también sugieren causas básicas, con menos peso
+    R.actos.concat(R.condiciones).filter(function (o) { return !o.on; }).slice(0, 6).forEach(function (o) {
+      var x = CAT.get("actos", o.c) || CAT.get("condiciones", o.c); if (!x) return;
+      x.fp.slice(0, 2).forEach(function (f) { add("fp", f, 0.5, "🔗 podría explicar " + o.c); }); x.ft.slice(0, 2).forEach(function (f) { add("ft", f, 0.5, "🔗 podría explicar " + o.c); });
+    });
     R.fp = elegir("fp"); R.ft = elegir("ft");
     // 4) faltas de control de esas causas básicas + lo que enseña el histórico
     bas = marcados("fp", R.fp).concat(marcados("ft", R.ft)); var ln = {};
@@ -132,7 +142,7 @@ var AN = {
       o.psc = EV.pscSugerido(tmp, o.c);
       if (recurrente && o.psc === "C") { o.psc = "S"; o.m.push("📊 al repetirse, el estándar no está funcionando (S)"); }
     });
-    return R;
+    R._G = G; return R;
   },
 
   /* Potencial de pérdida: gravedad por la energía involucrada, probabilidad y exposición por el histórico */
@@ -169,15 +179,8 @@ var AN = {
     IA.preparar().then(function (ok) {
       if (!ok) return;
       var v = IA.ventana("✨ Análisis integral: IA + reglas SCAT + histórico", function () { return AN.aplicar(v.res); });
-      var lista = function (l) { return CAT[l].map(function (o) { return o.c + " " + o.t; }).join("\n"); };
-      IA.generar([
-        { role: "system", content: "Eres un analista de accidentes que aplica la técnica SCAT. Lees el relato y eliges, de las listas dadas, los códigos que mejor lo explican. Solo usas códigos que aparecen en las listas. Si el relato no da información para una categoría, dejas esa lista vacía. Respondes únicamente con JSON válido." },
-        { role: "user", content: "Relato del evento:\n\"\"\"\n" + String(ev.descripcion || "").slice(0, 1800) + (ev.tarea ? "\nTarea: " + ev.tarea : "") + (ev.ambito ? "\nLugar: " + ev.ambito : "") + (ev.parte_cuerpo ? "\nParte del cuerpo: " + ev.parte_cuerpo : "") + (ev.naturaleza ? "\nLesión: " + ev.naturaleza : "") + "\n\"\"\"\n\n" +
-          "TIPOS DE CONTACTO:\n" + lista("contactos") + "\n\nACTOS SUBESTÁNDAR:\n" + lista("actos") + "\n\nCONDICIONES SUBESTÁNDAR:\n" + lista("condiciones") +
-          "\n\nFACTORES PERSONALES:\n" + lista("fPersonales") + "\n\nFACTORES DEL TRABAJO:\n" + lista("fTrabajo") +
-          "\n\nResponde solo con este JSON (máximo 2 contactos, 3 actos, 3 condiciones, 2 factores personales y 2 del trabajo):\n{\"contactos\":[\"C00\"],\"actos\":[\"A00\"],\"condiciones\":[\"K00\"],\"fp\":[\"FP0\"],\"ft\":[\"FT0\"],\"explicacion\":\"una frase breve\"}" }
-      ], { max: 220, onProg: v.prog, onToken: function () { var e = $("#iaEstT", v.m.el); if (e) e.textContent = "Analizando el relato…"; } }).then(function (r) {
-        v.res = AN.calcular(ev, AN.leerIA(r.texto));
+      AN.preguntarIA(ev, { onProg: v.prog }).then(function (r) {
+        v.res = AN.calcular(ev, r.ia);
         var o = $("#iaOut", v.m.el); o.hidden = false; AN.pintar(o, v.res);
         v.fin(r); $("[data-ok]", v.m.el).textContent = "Marcar en el análisis";
       }).catch(function (e) {
@@ -185,6 +188,37 @@ var AN = {
         v.error(e); v.res = AN.calcular(ev, null);
         var o = $("#iaOut", v.m.el); o.hidden = false; AN.pintar(o, v.res);
         $("[data-ok]", v.m.el).disabled = false; $("[data-ok]", v.m.el).textContent = "Marcar en el análisis";
+      });
+    });
+  },
+  /* La IA responde dos preguntas cortas (un modelo pequeño acierta mucho más eligiendo entre pocas opciones):
+     1) el tipo de contacto, entre los 15 del catálogo;
+     2) actos y condiciones, solo entre los candidatos que ya respaldan el catálogo, el relato o el histórico.
+     Las causas básicas y la NAC salen de la lógica SCAT (relaciones del catálogo + histórico), no de la IA. */
+  preguntarIA: function (ev, o) {
+    o = o || {};
+    var rel = "Relato del evento:\n\"\"\"\n" + String(ev.descripcion || "").slice(0, 1500) + (ev.tarea ? "\nTarea: " + ev.tarea : "") + (ev.ambito ? "\nLugar: " + ev.ambito : "") +
+      (ev.parte_cuerpo && ev.parte_cuerpo !== "No aplica" ? "\nParte del cuerpo: " + ev.parte_cuerpo : "") + (ev.naturaleza ? "\nLesión: " + ev.naturaleza : "") + "\n\"\"\"\n\n";
+    var sys = { role: "system", content: "Eres un analista de accidentes de trabajo que aplica la técnica SCAT en una empresa de fibra óptica. Respondes solo con JSON válido y usas únicamente códigos de las listas dadas." };
+    var lin = function (l, cods) { return cods.map(function (c) { return c + " " + CAT.txt(l, c); }).join("\n"); };
+    var ia = { contactos: [], actos: [], condiciones: [], fp: [], ft: [] }, s = EV.draft;
+    return IA.generar([sys, { role: "user", content: rel + "¿Con qué tipo de contacto o energía ocurrió (o pudo ocurrir) la lesión? Elige 1 código; 2 solo si hubo dos contactos distintos.\n\n" +
+      lin("contactos", CAT.contactos.map(function (x) { return x.c; })) + "\n\nResponde solo con: {\"contactos\":[\"código\"]}" }],
+      { max: 30, onProg: o.onProg, fase: "Paso 1 de 2: identificando el tipo de contacto…" }).then(function (r1) {
+      ia.contactos = AN.leerIA(r1.texto).contactos.slice(0, 2);
+      var G = AN.calcular(ev, ia).R._G;
+      var cand = function (k) { return Object.keys(G[k] || {}).map(function (c) { return G[k][c]; }).filter(function (x) { return (s[k] || []).indexOf(x.c) < 0; })
+        .sort(function (a, b) { return b.s - a.s; }).slice(0, 7).map(function (x) { return x.c; }); };
+      var ca = cand("actos"), ck = cand("condiciones");
+      if (!ca.length && !ck.length) return { ia: ia, segundos: r1.segundos, tps: r1.tps };
+      return IA.generar([sys, { role: "user", content: rel + "Marca solo lo que el relato muestra o permite deducir con claridad.\n\nACTOS (lo que la persona hizo o dejó de hacer):\n" + (ca.length ? lin("actos", ca) : "(ninguno)") +
+        "\n\nCONDICIONES (estado del lugar, del equipo, de la herramienta o del EPP):\n" + (ck.length ? lin("condiciones", ck) : "(ninguna)") +
+        "\n\nElige como máximo 2 actos y 2 condiciones. Si ninguno aplica, deja la lista vacía.\nResponde solo con: {\"actos\":[],\"condiciones\":[]}" }],
+        { max: 40, fase: "Paso 2 de 2: eligiendo actos y condiciones…" }).then(function (r2) {
+        var j = AN.leerIA(r2.texto), seg = r1.segundos + r2.segundos;
+        ia.actos = j.actos.filter(function (c) { return ca.indexOf(c) >= 0; }).slice(0, 2);
+        ia.condiciones = j.condiciones.filter(function (c) { return ck.indexOf(c) >= 0; }).slice(0, 2);
+        return { ia: ia, segundos: seg, tps: (r1.tokens + r2.tokens) / Math.max(seg, 0.01) };
       });
     });
   },
@@ -220,7 +254,7 @@ var AN = {
     var hay = 0;
     ["contactos", "actos", "condiciones", "fp", "ft", "nac"].forEach(function (k) {
       var arr = res.R[k]; if (!arr.length) return; hay += arr.length;
-      h += '<div class="an-g"><h4>' + AN.TITULO[k] + '</h4>' + arr.map(function (o, i) {
+      h += '<div class="an-g"><h4>' + AN.TITULO[k] + '</h4>' + (k === "fp" ? '<div class="small muted mb">Las causas básicas salen de la entrevista y la investigación: aquí van ordenadas por relación con lo marcado; elige las que se confirmaron.</div>' : "") + arr.map(function (o, i) {
         return '<label class="chk ' + (o.on ? "on" : "") + '"><input type="checkbox" ' + (o.on ? "checked" : "") + ' data-k="' + k + '" data-i="' + i + '"><span><span class="code">' + o.c + (o.psc ? " " + o.psc : "") + '</span>' + esc(CAT.txt(AN.LISTA[k], o.c)) + ' ' + conf(o.s) +
           '<span class="an-ms">' + o.m.map(function (m) { return '<span class="an-m">' + esc(m) + '</span>'; }).join("") + '</span></span></label>';
       }).join("") + '</div>';
@@ -246,4 +280,101 @@ var AN = {
     toast(n ? n + " elemento(s) marcados: revisa el análisis y guarda." : "No se marcó nada nuevo.", "ok");
     EV.re(); return true;
   }
+};
+
+/* =====================================================================
+   🧪 Medición de precisión: compara lo que propone cada método con lo que se marcó de verdad.
+   Usa los eventos reales cerrados de la base (sin contarse a sí mismos) y 16 casos de referencia típicos
+   de fibra óptica (sin datos personales). SSOMA puede revisar y ajustar las causas esperadas.
+   ===================================================================== */
+AN.CASOS = [
+  { d: "Al subir por la escalera telescópica para instalar la caja NAP en el poste, la escalera se deslizó porque no la amarró al poste. El técnico cayó desde unos 2 metros y se golpeó la cadera. No había llenado el ATS.", a: "Poste / red aérea", p: "Tronco / Espalda", n: "Contusión / Golpe", t: "AI", e: { contactos: ["C03"], inm: ["A03", "A16"], bas: ["FP7", "FT1"] } },
+  { d: "Mientras pelaba el cable drop con el cúter en el domicilio del cliente, la cuchilla se resbaló y se cortó el dedo índice. No usaba los guantes anticorte porque le incomodaban.", a: "Domicilio del cliente (FTTH)", p: "Mano / Dedos", n: "Herida / Corte", e: { contactos: ["C02"], inm: ["A07", "A08"], bas: ["FP7", "FP5"] } },
+  { d: "Para verificar el conector, el técnico miró directamente la punta de la fibra sin comprobar que estuviera apagada; el puerto tenía señal activa y sintió ardor en el ojo derecho.", a: "Nodo / data center", p: "Ojos", n: "Lesión ocular", e: { contactos: ["C10"], inm: ["A16", "A08"], bas: ["FP5"] } },
+  { d: "Al levantar sola una bobina de fibra de unos 40 kg para subirla a la camioneta, sintió un tirón y dolor en la zona lumbar. No había carretilla disponible.", a: "Almacén", p: "Tronco / Espalda", n: "Lesión ergonómica", e: { contactos: ["C13"], inm: ["A11"], bas: ["FT5", "FP5"] } },
+  { d: "Caminando por la vereda mojada por la lluvia hacia el poste, resbaló y se torció el tobillo izquierdo.", a: "Vehículo / vía pública", p: "Pie / Tobillo", n: "Esguince / Luxación", e: { contactos: ["C04"], inm: ["K07"], bas: [] } },
+  { d: "Abrió la cámara subterránea e ingresó sin medir gases ni ventilar; a los pocos minutos se mareó y tuvo que salir con ayuda del compañero.", a: "Cámara / red subterránea", p: "Múltiple", n: "Intoxicación", e: { contactos: ["C14"], inm: ["A16", "K08", "K13"], bas: ["FP5", "FT6"] } },
+  { d: "Tendiendo cable aéreo, el mensajero tocó una línea de media tensión energizada y el técnico recibió una descarga en la mano. No se respetó la distancia mínima de seguridad.", a: "Poste / red aérea", p: "Mano / Dedos", n: "Descarga eléctrica", t: "AI", e: { contactos: ["C08"], inm: ["A16"], bas: ["FT6", "FP5"] } },
+  { d: "Al retroceder la camioneta en un pasaje estrecho sin vigía, el conductor golpeó un poste y dañó el parachoques.", a: "Vehículo / vía pública", p: "No aplica", n: "Sin lesión", t: "INC", e: { contactos: ["C01"], inm: ["A02", "K04"], bas: ["FT1", "FP7"] } },
+  { d: "Al ingresar al patio del cliente para instalar el servicio, un perro suelto lo mordió en la pierna. El cliente no había amarrado al animal.", a: "Domicilio del cliente (FTTH)", p: "Miembro inferior", n: "Herida / Corte", e: { contactos: ["C15"], inm: [], bas: ["FT9"] } },
+  { d: "Al retirar la fibra del horno de la empalmadora sin esperar a que enfríe, se quemó la yema de los dedos.", a: "Nodo / data center", p: "Mano / Dedos", n: "Quemadura", e: { contactos: ["C09"], inm: ["A07"], bas: ["FP7"] } },
+  { d: "Taladrando la pared del cliente sin lentes de seguridad, se rompió la broca desgastada y una esquirla le cayó en el ojo.", a: "Domicilio del cliente (FTTH)", p: "Ojos", n: "Lesión ocular", e: { contactos: ["C02"], inm: ["A08", "A06", "K03"], bas: ["FT7"] } },
+  { d: "En el nodo, con poca iluminación, se golpeó la cabeza contra una bandeja de cables instalada muy baja.", a: "Nodo / data center", p: "Cabeza", n: "Contusión / Golpe", e: { contactos: ["C01"], inm: ["K12", "K04"], bas: ["FT2"] } },
+  { d: "Subiendo la escalera de fibra de vidrio, un peldaño que ya estaba rajado se rompió y el técnico cayó desde 1.5 metros. La escalera no pasó inspección preuso.", a: "Poste / red aérea", p: "Miembro inferior", n: "Contusión / Golpe", e: { contactos: ["C03"], inm: ["A06", "K14", "K03"], bas: ["FT4"] } },
+  { d: "Desde lo alto del poste se le cayó el alicate y golpeó en el hombro al ayudante que estaba abajo sin casco; no se había delimitado la zona de trabajo.", a: "Poste / red aérea", p: "Miembro superior", n: "Contusión / Golpe", e: { contactos: ["C02"], inm: ["A02", "A08", "K05"], bas: ["FT1"] } },
+  { d: "Después de una jornada de 14 horas, cansado, se tropezó con un rollo de cable dejado en el pasillo del almacén y cayó al piso.", a: "Almacén", p: "Miembro superior", n: "Contusión / Golpe", e: { contactos: ["C04"], inm: ["K07"], bas: ["FP3", "FT1"] } },
+  { d: "Al cerrar la tapa metálica de la cámara, se atrapó los dedos entre la tapa y el marco porque la bajó con las manos en vez de usar la herramienta de izaje.", a: "Cámara / red subterránea", p: "Mano / Dedos", n: "Contusión / Golpe", e: { contactos: ["C05"], inm: ["A07"], bas: ["FP5"] } }
+];
+AN.casosPrueba = function () {
+  var reales = S.eventos.filter(function (e) { var s = e.scat || {}; return !e.historico && e.estado !== "Anulado" && (s.contactos || []).length && ((s.actos || []).length + (s.condiciones || []).length) && String(e.descripcion || "").trim().length >= 25; })
+    .map(function (e) { var s = e.scat; return { ev: e, fuente: "real", e: { contactos: s.contactos, inm: (s.actos || []).concat(s.condiciones || []), bas: (s.fp || []).concat(s.ft || []) } }; });
+  var ref = AN.CASOS.map(function (c, i) { return { fuente: "referencia", e: c.e, ev: { id: "PRUEBA-" + (i + 1), descripcion: c.d, ambito: c.a, parte_cuerpo: c.p, naturaleza: c.n, tipo: c.t || "AL", fecha: "2000-01-01" } }; });
+  return reales.concat(ref);
+};
+AN.vacio = function () { return { contactos: [], actos: [], condiciones: [], fp: [], ft: [], nac: [] }; };
+/* El botón antiguo: con el contacto correcto ya elegido, toma las 2 primeras relaciones del catálogo en cada nivel. */
+AN.antiguo = function (cs) {
+  var s = { contactos: cs.e.contactos.slice(), actos: [], condiciones: [], fp: [], ft: [] }, sg = EV.sugerencias(s);
+  s.actos = sg.actos.slice(0, 2); s.condiciones = sg.condiciones.slice(0, 2); sg = EV.sugerencias(s); s.fp = sg.fp.slice(0, 2); s.ft = sg.ft.slice(0, 2);
+  return { contactos: s.contactos, inm: s.actos.concat(s.condiciones), bas: s.fp.concat(s.ft) };
+};
+AN.propuesta = function (res) {
+  var on = function (k) { return res.R[k].filter(function (o) { return o.on; }).map(function (o) { return o.c; }); };
+  var to = function (k) { return res.R[k].map(function (o) { return o.c; }); };
+  return { contactos: on("contactos"), inm: on("actos").concat(on("condiciones")), bas: on("fp").concat(on("ft")),
+    lista: { contactos: to("contactos"), inm: to("actos").concat(to("condiciones")), bas: to("fp").concat(to("ft")) } };
+};
+AN.puntuar = function (p, e, acum) {
+  ["contactos", "inm", "bas"].forEach(function (k) {
+    var a = acum[k] = acum[k] || { ok: 0, prop: 0, esp: 0, lis: 0 }, l = p.lista ? p.lista[k].concat(p[k]) : p[k];
+    a.ok += p[k].filter(function (c) { return e[k].indexOf(c) >= 0; }).length; a.prop += p[k].length; a.esp += e[k].length;
+    a.lis += e[k].filter(function (c) { return l.indexOf(c) >= 0; }).length;
+  });
+};
+AN.tablaMedicion = function (filas) {
+  var pc = function (a, b) { return b ? Math.round(a / b * 100) + "%" : "—"; };
+  var celda = function (a) { return a ? '<td class="num"><b>' + pc(a.ok, a.prop) + '</b></td><td class="num">' + pc(a.ok, a.esp) + '</td><td class="num muted">' + pc(a.lis, a.esp) + '</td>' : '<td colspan="3" class="muted">—</td>'; };
+  return '<div class="tbl-wrap"><table class="tbl"><thead><tr><th rowspan="2">Método</th><th colspan="3">Contacto</th><th colspan="3">Causas inmediatas</th><th colspan="3">Causas básicas</th></tr>' +
+    '<tr>' + [1, 2, 3].map(function () { return '<th>Precisión</th><th>Cobertura</th><th>En la lista</th>'; }).join("") + '</tr></thead><tbody>' +
+    filas.map(function (f) { return '<tr><td>' + f[0] + '</td>' + (f[2] ? '<td colspan="3" class="small muted">lo eliges tú</td>' : celda(f[1].contactos)) + celda(f[1].inm) + celda(f[1].bas) + '</tr>'; }).join("") + '</tbody></table></div>' +
+    '<p class="small muted mt"><b>Precisión</b>: de lo que premarca, cuánto era correcto (más alto = menos ruido). <b>Cobertura</b>: de las causas correctas, cuántas premarcó. <b>En la lista</b>: cuántas aparecen en la propuesta, aunque sea sin marcar (a un clic).</p>';
+};
+AN.medirBase = function (casos) {
+  var A = {}, B = {}, D = {}, guardado = EV.draft;
+  casos.forEach(function (cs) {
+    EV.draft = AN.vacio(); AN.puntuar(AN.antiguo(cs), cs.e, A); AN.puntuar(AN.propuesta(AN.calcular(cs.ev, null)), cs.e, B);
+    EV.draft = AN.vacio(); EV.draft.contactos = cs.e.contactos.slice(); var p = AN.propuesta(AN.calcular(cs.ev, null)); p.contactos = cs.e.contactos.slice(); AN.puntuar(p, cs.e, D);
+  });
+  EV.draft = guardado;
+  return [["Botón antiguo (solo catálogo)", A, true], ["Análisis integral sin IA, con el contacto ya elegido", D, true], ["Análisis integral sin IA, desde cero", B]];
+};
+AN.medir = function () {
+  var casos = AN.casosPrueba(), nReal = casos.filter(function (c) { return c.fuente === "real"; }).length, conIA = IA.visible();
+  var m = modal({ title: "🧪 Precisión de las sugerencias SCAT", wide: true, cancel: "Cerrar",
+    body: '<p style="margin-top:0">Compara lo que propone cada método con las causas marcadas de verdad en <b>' + casos.length + ' casos</b>: ' + nReal + ' eventos reales cerrados de la base (cada uno sin contarse a sí mismo) y ' + AN.CASOS.length + ' casos de referencia de fibra óptica.</p>' +
+      '<div class="flex"><button class="btn primary" id="anM1">Medir sin IA (instantáneo)</button>' +
+      (conIA ? '<button class="btn ia-btn" style="margin:0" id="anM2">✨ Medir también con IA (≈' + Math.ceil(casos.length * 0.5) + ' min)</button>' : "") + '</div><div id="anMR" class="mt"></div>' });
+  $("#anM1", m.el).onclick = function () { $("#anMR", m.el).innerHTML = AN.tablaMedicion(AN.medirBase(casos)); };
+  var b2 = $("#anM2", m.el);
+  if (b2) b2.onclick = function () {
+    var filas = AN.medirBase(casos), C = {}, i = 0, fallas = [], box = $("#anMR", m.el), guardado = EV.draft;
+    b2.disabled = true; $("#anM1", m.el).disabled = true;
+    (function sig() {
+      if (!document.body.contains(box)) { EV.draft = guardado; return; }          // se cerró la ventana
+      if (i >= casos.length) {
+        EV.draft = guardado;
+        box.innerHTML = AN.tablaMedicion(filas.concat([["✨ Análisis integral con IA (" + esc(IA.MODELOS[IA.conf().modelo].t) + ")", C]])) +
+          (fallas.length ? '<details class="mt"><summary class="small">La IA eligió mal el contacto en ' + fallas.length + ' caso(s)</summary><ul class="small">' + fallas.map(function (f) { return "<li>" + esc(f) + "</li>"; }).join("") + "</ul></details>" : "");
+        b2.disabled = false; $("#anM1", m.el).disabled = false; return;
+      }
+      var cs = casos[i];
+      box.innerHTML = '<div class="ia-est"><span class="spin-b ia-spin"></span><span>Caso ' + (i + 1) + " de " + casos.length + " con IA…</span></div>";
+      EV.draft = AN.vacio();
+      AN.preguntarIA(cs.ev, {}).then(function (r) {
+        EV.draft = AN.vacio(); AN.puntuar(AN.propuesta(AN.calcular(cs.ev, r.ia)), cs.e, C);
+        if (r.ia.contactos.length && !r.ia.contactos.some(function (c) { return cs.e.contactos.indexOf(c) >= 0; }))
+          fallas.push(String(cs.ev.descripcion).slice(0, 70) + "… → IA: " + r.ia.contactos.join(", ") + " · correcto: " + cs.e.contactos.join(", "));
+      }).catch(function (e) { fallas.push("Error de la IA: " + (e && e.message || e)); }).then(function () { i++; sig(); });
+    })();
+  };
 };
