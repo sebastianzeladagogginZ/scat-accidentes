@@ -64,6 +64,7 @@ var AN = {
     [/PUNTO DE ATRAPAMIENTO|LINEA DE FUEGO|EN (LA|SU) TRAYECTORIA|DENTRO DEL AREA DE (DESPLAZAMIENTO|MOVIMIENTO)/, ["A12"], "se ubicó en la línea de fuego", 2],
     [/NO (FUERON |FUE |SE )?(REPORTAD|REPORTO)\w* OPORTUNAMENTE|SIN REPORTARLO/, ["N05"], "los eventos menores no se reportaron", 2]
   ],
+  GRUPOS: ["contactos", "actos", "condiciones", "fp", "ft", "nac"],   // categorías de la propuesta (R también guarda _G, uso interno)
   LISTA: { contactos: "contactos", actos: "actos", condiciones: "condiciones", fp: "fPersonales", ft: "fTrabajo", nac: "nac" },
   TITULO: { contactos: "Tipo de contacto", actos: "Actos subestándar", condiciones: "Condiciones subestándar", fp: "Factores personales", ft: "Factores del trabajo", nac: "Falta de control (NAC)" },
   MAX: { contactos: 3, actos: 5, condiciones: 5, fp: 4, ft: 4, nac: 5 },
@@ -299,7 +300,7 @@ var AN = {
     if (!res) return true;
     var s = EV.draft, n = 0;
     if (res.potOn) ["gravedad", "probabilidad", "exposicion"].forEach(function (k) { if (!s[k]) { s[k] = res.pot[k].c; n++; } });
-    Object.keys(res.R).forEach(function (k) {
+    AN.GRUPOS.forEach(function (k) {
       res.R[k].forEach(function (o) {
         if (!o.on) return;
         if (k === "nac") { if (!s.nac.some(function (x) { return x.c === o.c; })) { s.nac.push({ c: o.c, psc: o.psc || "P" }); n++; } }
@@ -308,7 +309,7 @@ var AN = {
     });
     // se guarda lo propuesto para aprender de lo que el equipo conserve, quite o agregue
     var on = [], lista = [];
-    Object.keys(res.R).forEach(function (k) { res.R[k].forEach(function (o) { lista.push(o.c); if (o.on) on.push(o.c); }); });
+    AN.GRUPOS.forEach(function (k) { res.R[k].forEach(function (o) { lista.push(o.c); if (o.on) on.push(o.c); }); });
     s.an_prop = { on: on, lista: lista, f: new Date().toISOString().slice(0, 10) };
     if (!s.causa_raiz && n) s.causa_raiz = EV.textoCR(s, L.evento(EV.id));
     toast(n ? n + " elemento(s) marcados: revisa el análisis y guarda." : "No se marcó nada nuevo.", "ok");
