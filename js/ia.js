@@ -71,6 +71,11 @@ var IA = {
     };
     window.fetch = function (u, o) {
       var url = String(u && u.url || u), metodo = String(o && o.method || u && u.method || "GET").toUpperCase();
+      if (metodo === "GET" && IA.carpeta && /huggingface\.co|hf\.co/.test(url)) {         // modelo elegido desde una carpeta del equipo: sin internet
+        var f = IA.carpeta[url.split("?")[0].split("/").pop()];
+        return Promise.resolve(f ? new Response(f, { status: 200, headers: { "content-length": String(f.size), "content-type": "application/octet-stream" } })
+                                 : new Response("", { status: 404 }));
+      }
       if (metodo === "GET" && /huggingface\.co|hf\.co/.test(url)) return porPartes(url);
       var intento = 0;
       return (function prueba() {
@@ -111,7 +116,7 @@ var IA = {
   /* Pide permiso antes de la primera descarga y muestra el avance. */
   preparar: function () {
     var c = IA.conf(), m = IA.MODELOS[c.modelo];
-    if (IA.pipe || c.permitido) return Promise.resolve(true);
+    if (IA.pipe || c.permitido || IA.carpeta) return Promise.resolve(true);
     return new Promise(function (res) {
       var listo = false, md = modal({ title: "Activar el asistente IA en este equipo", ok: "Descargar y activar", cancel: "Ahora no",
         body: '<div class="callout info mb"><span>🔒</span><div><b>Funciona dentro de tu computadora</b>Los relatos y datos del accidente no salen de este equipo: no se envían a ningún servidor ni a la nube.</div></div>' +
@@ -223,6 +228,21 @@ var IA = {
       (IA.estado === "compatible" ? '<label class="pref"><span><b>Usar el asistente en este equipo</b><small>Muestra los botones ✨ en el reporte y en el análisis SCAT.</small></span><input type="checkbox" class="sw" ' + (c.activo ? "checked" : "") + ' onchange="IA.guardar(\'activo\',this.checked);Views.cuenta()"></label>' +
         '<div class="pref"><span><b>Modelo</b><small>El 0.8B es más rápido en equipos modestos, pero redacta peor.</small></span><select onchange="IA.guardar(\'modelo\',this.value);IA.pipe=null;toast(\'Modelo cambiado\',\'ok\')">' +
         Object.keys(IA.MODELOS).map(function (k) { return '<option value="' + k + '"' + (c.modelo === k ? " selected" : "") + '>' + IA.MODELOS[k].t + ' · ' + IA.MODELOS[k].peso + '</option>'; }).join("") + '</select></div>' +
-        '<div class="flex mt"><button class="btn primary" onclick="IA.probar()">✨ Probar velocidad en este equipo</button></div>' : "") + '</div>';
+        '<div class="flex mt"><button class="btn primary" onclick="IA.probar()">✨ Probar velocidad en este equipo</button>' +
+        '<button class="btn ghost" onclick="document.getElementById(\'iaCarpeta\').click()">📁 Cargar modelo desde carpeta</button>' +
+        '<input type="file" id="iaCarpeta" webkitdirectory multiple hidden onchange="IA.elegirCarpeta(this)"></div>' +
+        '<p class="small muted mt">¿La red bloquea la descarga? Baja los archivos del modelo en otra computadora, cópialos a una carpeta de este equipo y elígela aquí. Después de la primera carga queda guardado en el navegador.</p>' : "") + '</div>';
+  },
+  NECESARIOS: ["config.json", "generation_config.json", "tokenizer.json", "tokenizer_config.json", "embed_tokens_q4f16.onnx", "embed_tokens_q4f16.onnx_data", "decoder_model_merged_q4f16.onnx", "decoder_model_merged_q4f16.onnx_data"],
+  elegirCarpeta: function (inp) {
+    var mapa = {};
+    Array.prototype.forEach.call(inp.files || [], function (f) { mapa[f.name] = f; });
+    inp.value = "";
+    var faltan = IA.NECESARIOS.filter(function (n) { return !mapa[n]; });
+    if (faltan.length) { toast("Faltan archivos en la carpeta: " + faltan.join(", "), "bad"); return; }
+    IA.guardar("modelo", mapa["decoder_model_merged_q4f16.onnx_data"].size > 800e6 ? "2b" : "08b");   // 2B ≈ 1,1 GB · 0.8B ≈ 0,4 GB
+    IA.carpeta = mapa; IA.pipe = null;
+    toast("Modelo encontrado en la carpeta. Cargando…", "ok");
+    IA.probar();
   }
 };
