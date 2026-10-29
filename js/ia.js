@@ -14,7 +14,7 @@ var IA = {
   K: "scat_ia", estado: "sin_revisar", pipe: null, T: null, cargando: null,
 
   /* ---------- preferencias y compatibilidad ---------- */
-  conf: function () { try { var c = JSON.parse(localStorage.getItem(IA.K) || "{}") || {}; return { activo: c.activo !== false, modelo: IA.MODELOS[c.modelo] ? c.modelo : "08b", permitido: !!c.permitido }; } catch (e) { return { activo: true, modelo: "08b", permitido: false }; } },
+  conf: function () { try { var c = JSON.parse(localStorage.getItem(IA.K) || "{}") || {}; return { activo: c.activo !== false, modelo: IA.MODELOS[c.modelo] ? c.modelo : "08b", permitido: !!c.permitido, carpeta: !!c.carpeta }; } catch (e) { return { activo: true, modelo: "08b", permitido: false, carpeta: false }; } },
   guardar: function (k, v) { var c = IA.conf(); c[k] = v; try { localStorage.setItem(IA.K, JSON.stringify(c)); } catch (e) {} },
   revisar: function () {                                              // ¿el equipo tiene WebGPU con números de media precisión?
     if (!navigator.gpu) { IA.estado = "incompatible"; return Promise.resolve(false); }
@@ -35,16 +35,25 @@ var IA = {
     var esperar = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
     var fallo = function (url, e, n) {
       var corto = url.replace(/^https?:\/\//, "").split("?")[0].replace(/\/resolve\/main\//, "/…/").slice(0, 90);
-      var err = new Error("No se pudo descargar «" + corto + "» tras " + n + " intentos (" + (e && e.message || e) + "). Revisa tu conexión o si un bloqueador o el filtro de la red bloquea huggingface.co / hf.co.");
+      var err = new Error(IA.conf().carpeta
+        ? "El modelo no está guardado en este navegador y la red no deja descargarlo. Ve a «Mi cuenta → 📁 Cargar modelo desde carpeta» y elige otra vez la carpeta del modelo."
+        : "No se pudo descargar «" + corto + "» tras " + n + " intentos (" + (e && e.message || e) + "). Revisa tu conexión o si un bloqueador o el filtro de la red bloquea huggingface.co / hf.co.");
       err.archivo = url; return err;
     };
+    // Una conexión que se congela (sin error) se corta a los «ms» y cuenta como intento fallido.
+    var conLimite = function (url, headers, ms, leer) {
+      var ctl = new AbortController(), t = setTimeout(function () { ctl.abort(); }, ms);
+      return fetchOriginal(url, { headers: headers, signal: ctl.signal }).then(leer).then(function (x) { clearTimeout(t); return x; }, function (e) { clearTimeout(t); throw ctl.signal.aborted ? new Error("la conexión no respondió") : e; });
+    };
+    var esHF = function (url) { return /huggingface\.co|hf\.co/.test(url); };
+    var rango = function (o) { var h = o && o.headers; return h ? (typeof h.get === "function" ? h.get("Range") : h.Range || h.range) : null; };
     // Los archivos del modelo se bajan por partes de 16 MB: si la conexión se corta a mitad, solo se repite esa parte (hasta 6 veces).
     var PARTE = 16 * 1024 * 1024;
     var porPartes = function (url) {
       var total = 0;
       var trozo = function (desde, intento) {
         var hasta = total ? Math.min(desde + PARTE, total) - 1 : desde + PARTE - 1;
-        return fetchOriginal(url, { headers: { Range: "bytes=" + desde + "-" + hasta } }).then(function (r) {
+        return conLimite(url, { Range: "bytes=" + desde + "-" + hasta }, 90000, function (r) {
           if (desde === 0 && r.status === 416) return fetchOriginal(url).then(function (s) { return { completo: s }; });   // archivo vacío
           if (desde === 0 && r.status !== 206) return { completo: r };               // sin partes, o 404 de un archivo opcional: tal cual
           if (r.status !== 206) throw new Error("HTTP " + r.status);
@@ -76,7 +85,20 @@ var IA = {
         return Promise.resolve(f ? new Response(f, { status: 200, headers: { "content-length": String(f.size), "content-type": "application/octet-stream" } })
                                  : new Response("", { status: 404 }));
       }
-      if (metodo === "GET" && /huggingface\.co|hf\.co/.test(url)) return porPartes(url);
+      if (metodo === "GET" && esHF(url)) {
+        var r0 = rango(o);
+        return (window.caches ? caches.match(url).catch(function () {}) : Promise.resolve()).then(function (c) {
+          if (c) return c;                                                                // ya guardado en el navegador: sin internet
+          if (!r0) return porPartes(url);
+          var n = 0;                                                                      // consulta corta (¿existe? ¿cuánto pesa?)
+          return (function prueba() {
+            return conLimite(url, { Range: r0 }, 20000, function (r) { return r; }).catch(function (e) {
+              if (++n < 3) return esperar(1500 * n).then(prueba);
+              throw fallo(url, e, 3);
+            });
+          })();
+        });
+      }
       var intento = 0;
       return (function prueba() {
         return fetchOriginal(u, o).catch(function (e) {
@@ -244,7 +266,7 @@ var IA = {
     var faltan = IA.NECESARIOS.filter(function (n) { return !mapa[n]; });
     if (faltan.length) { toast("Faltan archivos en la carpeta: " + faltan.join(", "), "bad"); return; }
     IA.guardar("modelo", mapa["decoder_model_merged_q4f16.onnx_data"].size > 800e6 ? "2b" : "08b");   // 2B ≈ 1,1 GB · 0.8B ≈ 0,4 GB
-    IA.carpeta = mapa; IA.pipe = null;
+    IA.carpeta = mapa; IA.pipe = null; IA.guardar("carpeta", true);
     toast("Modelo encontrado en la carpeta. Cargando…", "ok");
     IA.probar();
   }
