@@ -8,13 +8,13 @@
 var IA = {
   LIB: "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2/dist/transformers.min.js",   // versión fija, con onnxruntime incluido (sin dependencias sueltas)
   MODELOS: {
-    "2b": { id: "onnx-community/Qwen3.5-2B-ONNX", t: "Qwen3.5-2B (recomendado)", peso: "1,4 GB" },
-    "08b": { id: "onnx-community/Qwen3.5-0.8B-ONNX", t: "Qwen3.5-0.8B (liviano, para equipos modestos)", peso: "0,6 GB" }
+    "08b": { id: "onnx-community/Qwen3.5-0.8B-ONNX", t: "Liviano 0.8B (recomendado)", peso: "0,6 GB" },
+    "2b": { id: "onnx-community/Qwen3.5-2B-ONNX", t: "Completo 2B (más lento)", peso: "1,4 GB" }
   },
   K: "scat_ia", estado: "sin_revisar", pipe: null, T: null, cargando: null,
 
   /* ---------- preferencias y compatibilidad ---------- */
-  conf: function () { try { var c = JSON.parse(localStorage.getItem(IA.K) || "{}") || {}; return { activo: c.activo !== false, modelo: IA.MODELOS[c.modelo] ? c.modelo : "2b", permitido: !!c.permitido }; } catch (e) { return { activo: true, modelo: "2b", permitido: false }; } },
+  conf: function () { try { var c = JSON.parse(localStorage.getItem(IA.K) || "{}") || {}; return { activo: c.activo !== false, modelo: IA.MODELOS[c.modelo] ? c.modelo : "08b", permitido: !!c.permitido }; } catch (e) { return { activo: true, modelo: "08b", permitido: false }; } },
   guardar: function (k, v) { var c = IA.conf(); c[k] = v; try { localStorage.setItem(IA.K, JSON.stringify(c)); } catch (e) {} },
   revisar: function () {                                              // ¿el equipo tiene WebGPU con números de media precisión?
     if (!navigator.gpu) { IA.estado = "incompatible"; return Promise.resolve(false); }
@@ -207,7 +207,7 @@ var IA = {
         { max: 160, onProg: v.prog, onToken: v.texto }).then(function (r) {
           var carga = (performance.now() - t0) / 1000 - r.segundos; v.texto(r.texto); v.fin(r);
           var e = $("#iaEst", v.m.el); if (e) e.innerHTML = "✓ Carga del modelo: <b>" + fmt(Math.max(carga, 0), 1) + " s</b> · Redacción: <b>" + fmt(r.segundos, 1) + " s</b> · Velocidad: <b>" + fmt(r.tps, 1) + " palabras/s</b> aprox." +
-            (r.tps < 2 ? '<div class="small muted mt">Es lento en este equipo: prueba el modelo liviano (0.8B) en «Mi cuenta».</div>' : "");
+            (r.tps < 2 ? '<div class="small muted mt">' + (IA.conf().modelo === "2b" ? "Es lento en este equipo: prueba el modelo liviano (0.8B) en «Mi cuenta»." : "Este equipo es modesto para la IA: cada redacción tardará unos segundos. Cierra otras pestañas pesadas para que vaya más rápido.") + '</div>' : "");
         }).catch(v.error);
     });
   },
@@ -229,7 +229,7 @@ var IA = {
       '<p class="small muted" style="margin-top:-6px">Ordena relatos y sugiere causas SCAT. Funciona dentro de esta computadora: los datos no salen del equipo.</p>' +
       '<div class="plazo"><span>Este equipo</span>' + est + '</div>' +
       (IA.estado === "compatible" ? '<label class="pref"><span><b>Usar el asistente en este equipo</b><small>Muestra los botones ✨ en el reporte y en el análisis SCAT.</small></span><input type="checkbox" class="sw" ' + (c.activo ? "checked" : "") + ' onchange="IA.guardar(\'activo\',this.checked);Views.cuenta()"></label>' +
-        '<div class="pref"><span><b>Modelo</b><small>El 0.8B es más rápido en equipos modestos, pero redacta peor.</small></span><select onchange="IA.guardar(\'modelo\',this.value);IA.pipe=null;toast(\'Modelo cambiado\',\'ok\')">' +
+        '<div class="pref"><span><b>Modelo</b><small>El liviano responde en segundos en laptops de oficina. El 2B redacta mejor, pero necesita una tarjeta gráfica más potente.</small></span><select onchange="IA.guardar(\'modelo\',this.value);IA.pipe=null;toast(\'Modelo cambiado\',\'ok\')">' +
         Object.keys(IA.MODELOS).map(function (k) { return '<option value="' + k + '"' + (c.modelo === k ? " selected" : "") + '>' + IA.MODELOS[k].t + ' · ' + IA.MODELOS[k].peso + '</option>'; }).join("") + '</select></div>' +
         '<div class="flex mt"><button class="btn primary" onclick="IA.probar()">✨ Probar velocidad en este equipo</button>' +
         '<button class="btn ghost" onclick="document.getElementById(\'iaCarpeta\').click()">📁 Cargar modelo desde carpeta</button>' +
