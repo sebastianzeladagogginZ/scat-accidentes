@@ -87,6 +87,9 @@ var IA = {
     };
     IA.cargando = import(IA.LIB).then(function (T) {
       IA.T = T; T.env.allowLocalModels = false;
+      // El motor se importa directo desde jsdelivr (permitido por la CSP); con la caché de wasm lo haría desde un blob:, que la CSP bloquea.
+      T.env.useWasmCache = false;
+      try { T.env.backends.onnx.wasm.numThreads = 1; } catch (e) {}       // sin aislamiento entre orígenes no hay hilos: evita otro blob:
       return T.pipeline("text-generation", m.id, { dtype: "q4f16", device: "webgpu",
         progress_callback: function (p) {
           if (p.status === "progress" && p.total) { archivos[p.file] = [p.loaded || 0, p.total]; var a = 0, b = 0; for (var f in archivos) { a += archivos[f][0]; b += archivos[f][1]; } onProg && onProg(Math.round(a / b * 100), b); }
