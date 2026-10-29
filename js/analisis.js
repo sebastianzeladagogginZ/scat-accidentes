@@ -359,7 +359,7 @@ AN.medir = function () {
     body: '<p style="margin-top:0">Compara lo que propone cada método con las causas marcadas de verdad en <b>' + casos.length + ' casos</b>: ' + nReal + ' eventos reales cerrados de la base (cada uno sin contarse a sí mismo) y ' + AN.CASOS.length + ' casos de referencia de fibra óptica.</p>' +
       (conIA ? '<p class="small muted">La IA se mide con el modelo elegido en «Mi cuenta» (' + esc(IA.MODELOS[IA.conf().modelo].t) + '). En el análisis real solo participa con el modelo 2B.</p>' : "") +
       '<div class="flex"><button class="btn primary" id="anM1">Medir sin IA (instantáneo)</button>' +
-      (conIA ? '<button class="btn ia-btn" style="margin:0" id="anM2">✨ Medir también con IA (≈' + Math.ceil(casos.length * 0.5) + ' min)</button>' : "") + '</div><div id="anMR" class="mt"></div>' });
+      (conIA ? '<button class="btn ia-btn" style="margin:0" id="anM2">✨ Medir también con IA (' + (IA.conf().modelo === "2b" ? "≈" + Math.round(casos.length * 5.5 / 60 * 10) / 10 + " h: deja el equipo enchufado y sin suspender" : "≈" + Math.ceil(casos.length * 0.5) + " min") + ')</button>' : "") + '</div><div id="anMR" class="mt"></div>' });
   $("#anM1", m.el).onclick = function () { $("#anMR", m.el).innerHTML = AN.tablaMedicion(AN.medirBase(casos)); };
   var b2 = $("#anM2", m.el);
   if (b2) b2.onclick = function () {

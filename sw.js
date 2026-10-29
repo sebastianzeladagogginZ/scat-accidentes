@@ -1,6 +1,6 @@
 /* Service worker: carga instantánea de la app (los datos SIEMPRE van a la red).
    Subir CACHE con cada publicación para que los usuarios reciban la nueva versión. */
-var CACHE = "scat-on-v3.8.2";
+var CACHE = "scat-on-v3.8.3";
 var ARCHIVOS = ["./", "index.html", "js/catalogos.js", "js/api.js", "js/app.js", "js/firma.js", "js/docs.js", "js/evento.js", "js/guia.js", "js/historico.js", "js/ia.js", "js/analisis.js", "js/tablero.js", "img/logo.svg", "img/logo-oscuro.svg", "img/logo.png", "img/icon.svg", "manifest.json"];
 
 self.addEventListener("install", function (e) {
