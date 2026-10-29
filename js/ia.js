@@ -194,41 +194,6 @@ var IA = {
     });
   },
 
-  /* ---------- 2) Sugerir causas SCAT (solo códigos del catálogo) ---------- */
-  sugerirScat: function () {
-    var ev = L.evento(EV.id); if (!ev) return;
-    var lista = function (l) { return CAT[l].map(function (o) { return o.c + " " + o.t; }).join("\n"); };
-    IA.preparar().then(function (ok) {
-      if (!ok) return;
-      var v = IA.ventana("✨ Sugerir causas SCAT a partir del relato", function () {
-        var s = EV.draft, n = 0; (v.sel || []).forEach(function (x) { if (s[x.k].indexOf(x.c) < 0) { s[x.k].push(x.c); n++; } });
-        toast(n ? n + " causa(s) marcadas: revísalas en el análisis y guarda." : "No había causas nuevas para marcar.", "ok"); EV.re(); return true;
-      });
-      IA.generar([
-        { role: "system", content: "Eres un analista de accidentes que aplica la técnica SCAT (Systematic Cause Analysis Technique). Lees el relato y eliges, de las listas dadas, los códigos que mejor lo explican. Solo puedes usar códigos que aparezcan en las listas. Si el relato no da información para una categoría, deja esa lista vacía. Responde únicamente con JSON válido." },
-        { role: "user", content: "Relato del evento:\n\"\"\"\n" + String(ev.descripcion || "").slice(0, 1800) + (ev.tarea ? "\nTarea: " + ev.tarea : "") + (ev.parte_cuerpo ? "\nParte del cuerpo: " + ev.parte_cuerpo : "") + "\n\"\"\"\n\n" +
-          "TIPOS DE CONTACTO:\n" + lista("contactos") + "\n\nACTOS SUBESTÁNDAR:\n" + lista("actos") + "\n\nCONDICIONES SUBESTÁNDAR:\n" + lista("condiciones") +
-          "\n\nResponde solo con este JSON (máximo 2 contactos, 4 actos y 4 condiciones):\n{\"contactos\":[\"C00\"],\"actos\":[\"A00\"],\"condiciones\":[\"K00\"],\"explicacion\":\"una frase breve\"}" }
-      ], { max: 180, onProg: v.prog, onToken: function () { $("#iaEstT", v.m.el) && ($("#iaEstT", v.m.el).textContent = "Analizando el relato…"); } }).then(function (r) {
-        var j = {}; try { j = JSON.parse((r.texto.match(/\{[\s\S]*\}/) || ["{}"])[0]); } catch (e) {
-          var cods = r.texto.match(/\b[CAK]\d{2}\b/g) || []; j = { contactos: cods.filter(function (c) { return c[0] === "C"; }), actos: cods.filter(function (c) { return c[0] === "A"; }), condiciones: cods.filter(function (c) { return c[0] === "K"; }) };
-        }
-        var vale = function (l, a) { return (Array.isArray(a) ? a : []).map(function (c) { return String(c).trim().toUpperCase().slice(0, 3); }).filter(function (c, i, arr) { return CAT.get(l, c) && arr.indexOf(c) === i; }); };
-        var sel = [].concat(vale("contactos", j.contactos).slice(0, 2).map(function (c) { return { k: "contactos", l: "contactos", c: c }; }),
-          vale("actos", j.actos).slice(0, 4).map(function (c) { return { k: "actos", l: "actos", c: c }; }),
-          vale("condiciones", j.condiciones).slice(0, 4).map(function (c) { return { k: "condiciones", l: "condiciones", c: c }; }));
-        v.sel = sel;
-        var o = $("#iaOut", v.m.el); o.hidden = false;
-        o.innerHTML = sel.length ? (j.explicacion ? '<p style="margin:0 0 10px"><b>Lectura del asistente:</b> ' + esc(String(j.explicacion).slice(0, 300)) + '</p>' : "") +
-          '<div class="small muted mb">Desmarca lo que no corresponda. Lo marcado se agrega al análisis (no reemplaza lo que ya tienes).</div>' +
-          sel.map(function (x, i) { return '<label class="chk on"><input type="checkbox" checked data-i="' + i + '"><span><span class="code">' + x.c + '</span>' + esc(CAT.txt(x.l, x.c)) + ' <span class="small muted">· ' + ({ contactos: "contacto", actos: "acto", condiciones: "condición" }[x.k]) + '</span></span></label>'; }).join("")
-          : '<div class="callout warn"><span>!</span><div>El asistente no encontró causas claras en el relato. Completa la descripción del evento con más detalle y vuelve a intentarlo.</div></div>';
-        $$("input[data-i]", o).forEach(function (cb) { cb.onchange = function () { cb.parentNode.classList.toggle("on", cb.checked); v.sel = sel.filter(function (x, i) { var c = $('input[data-i="' + i + '"]', o); return c && c.checked; }); }; });
-        v.fin(r); if (!sel.length) $("[data-ok]", v.m.el).disabled = true;
-      }).catch(v.error);
-    });
-  },
-
   /* ---------- 3) Prueba de velocidad (Mi cuenta) ---------- */
   probar: function () {
     IA.preparar().then(function (ok) {
