@@ -50,6 +50,8 @@ var AN = {
   TITULO: { contactos: "Tipo de contacto", actos: "Actos subestándar", condiciones: "Condiciones subestándar", fp: "Factores personales", ft: "Factores del trabajo", nac: "Falta de control (NAC)" },
   MAX: { contactos: 3, actos: 5, condiciones: 5, fp: 4, ft: 4, nac: 5 },
 
+  /* La IA solo participa con el modelo 2B: en la medición, el liviano (0.8B) bajaba la precisión del contacto de 94% a 41%. */
+  usaIA: function () { return IA.visible() && IA.conf().modelo === "2b"; },
   clave: function (cod) { var l = CAT.listaDe(cod); return { fPersonales: "fp", fTrabajo: "ft" }[l] || l; },
 
   /* 🔎 Qué dice el relato (y los datos del evento) */
@@ -96,7 +98,10 @@ var AN = {
       G[k] = G[k] || {}; var o = G[k][c] = G[k][c] || { c: c, s: 0, m: [] };
       o.s += pts; if (m && o.m.indexOf(m) < 0) o.m.push(m);
     };
-    if (ia) ["contactos", "actos", "condiciones", "fp", "ft"].forEach(function (k) { (ia[k] || []).forEach(function (c) { add(k, c, 2, "✨ IA"); }); });
+    // si la IA contradice a las reglas del relato en el contacto, su voto vale la mitad (no puede imponer un error)
+    var contReglas = Object.keys(cl).filter(function (c) { return AN.clave(c) === "contactos"; });
+    if (ia) ["contactos", "actos", "condiciones", "fp", "ft"].forEach(function (k) { (ia[k] || []).forEach(function (c) {
+      add(k, c, k === "contactos" && contReglas.length && contReglas.indexOf(c) < 0 ? 1 : 2, "✨ IA"); }); });
     Object.keys(cl).forEach(function (c) { add(AN.clave(c), c, 2, "🔎 relato: " + cl[c]); });
     var nS = h.conScat.length;
     if (nS >= 3) Object.keys(h.frec).forEach(function (c) { var r = h.frec[c] / nS; if (r >= 0.4) add(AN.clave(c), c, nS >= 5 && r >= 0.6 ? 2 : 1, "📊 en " + h.frec[c] + " de " + nS + " casos parecidos"); });
@@ -169,7 +174,7 @@ var AN = {
   /* ---------- flujo ---------- */
   abrir: function () {
     var ev = L.evento(EV.id); if (!ev || !EV.draft) return;
-    var conIA = IA.visible() && String(ev.descripcion || "").trim().length > 20;
+    var conIA = AN.usaIA() && String(ev.descripcion || "").trim().length > 20;
     if (!conIA) {
       var m = modal({ title: "📊 Análisis integral: reglas SCAT + histórico", wide: true, ok: "Marcar en el análisis", cancel: "Cancelar", sticky: true,
         body: '<div id="anOut"></div>', onOk: function () { return AN.aplicar(m.res); } });
@@ -246,7 +251,7 @@ var AN = {
     var nom = function (l, c) { return CAT.txt(l, c); };
     var h = res.lectura;
     if (res.ia && res.ia.explicacion) h += '<p class="mt" style="margin-bottom:0"><b>Lectura de la IA:</b> ' + esc(res.ia.explicacion) + '</p>';
-    if (!res.ia) h += '<p class="small muted mt" style="margin-bottom:0">' + (IA.visible() ? "La IA no respondió: la propuesta usa las reglas del relato, las relaciones SCAT y el histórico." : "Sin IA en este equipo: la propuesta usa las reglas del relato, las relaciones SCAT y el histórico.") + '</p>';
+    if (!res.ia) h += '<p class="small muted mt" style="margin-bottom:0">' + (AN.usaIA() ? "La IA no respondió: la propuesta usa las reglas del relato, las relaciones SCAT y el histórico." : IA.visible() ? "Con el modelo liviano el análisis va sin IA (es más preciso así): usa las reglas del relato, las relaciones SCAT y el histórico." : "Sin IA en este equipo: la propuesta usa las reglas del relato, las relaciones SCAT y el histórico.") + '</p>';
     h += '<div class="small muted mt mb">Premarcado = lo respaldan al menos dos señales. Desmarca lo que no corresponda; lo que ya tenías marcado no se toca.</div>';
     h += '<div class="an-g"><h4>Potencial de pérdida</h4>' + (res.potOn ? '<label class="chk on"><input type="checkbox" checked data-pot><span>' +
       ["gravedad", "probabilidad", "exposicion"].map(function (k) { var p = res.pot[k]; return '<span class="an-pot"><b>' + { gravedad: "Gravedad", probabilidad: "Probabilidad", exposicion: "Exposición" }[k] + ':</b> ' + esc(nom(k, p.c)) + ' <span class="small muted">· ' + esc(p.por) + '</span></span>'; }).join("") +
@@ -352,6 +357,7 @@ AN.medir = function () {
   var casos = AN.casosPrueba(), nReal = casos.filter(function (c) { return c.fuente === "real"; }).length, conIA = IA.visible();
   var m = modal({ title: "🧪 Precisión de las sugerencias SCAT", wide: true, cancel: "Cerrar",
     body: '<p style="margin-top:0">Compara lo que propone cada método con las causas marcadas de verdad en <b>' + casos.length + ' casos</b>: ' + nReal + ' eventos reales cerrados de la base (cada uno sin contarse a sí mismo) y ' + AN.CASOS.length + ' casos de referencia de fibra óptica.</p>' +
+      (conIA ? '<p class="small muted">La IA se mide con el modelo elegido en «Mi cuenta» (' + esc(IA.MODELOS[IA.conf().modelo].t) + '). En el análisis real solo participa con el modelo 2B.</p>' : "") +
       '<div class="flex"><button class="btn primary" id="anM1">Medir sin IA (instantáneo)</button>' +
       (conIA ? '<button class="btn ia-btn" style="margin:0" id="anM2">✨ Medir también con IA (≈' + Math.ceil(casos.length * 0.5) + ' min)</button>' : "") + '</div><div id="anMR" class="mt"></div>' });
   $("#anM1", m.el).onclick = function () { $("#anMR", m.el).innerHTML = AN.tablaMedicion(AN.medirBase(casos)); };
