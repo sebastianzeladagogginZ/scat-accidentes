@@ -827,13 +827,13 @@ var ACC = {
 Views.indicadores = function () {
   var anio = S.anio, I = L.indicadores(anio), T = I.total, ed = L.es("ADMIN","SST") && !S.fArea;
   App.titulo("Indicadores de seguridad", "F-SST-PR-03-03 · Datos estadísticos · Ley 29783 / R.M. 050-2013-TR", selectorArea() + selectorAnio() + '<button class="btn" onclick="exportarInd()">⬇ <span class="hide-sm">Exportar</span></button>');
-  var inp = function (v, fn, w) { return '<input class="cell-in tnum" style="width:' + w + 'px" type="number" min="0" value="' + (v || "") + '" onchange="' + fn + '">'; };
+  var inp = function (v, mes, k, w) { return '<input class="cell-in tnum" style="width:' + w + 'px" type="number" min="0" value="' + (v || "") + '" data-mes="' + mes + '" data-k="' + k + '" onchange="guardarHHT(' + mes + ')">'; };
   $("#view").innerHTML = (S.fArea ? '<div class="callout warn mb">Filtrado por ' + esc(S.fArea) + ': las HHT son de toda la empresa, por lo que los índices del filtro son referenciales.</div>' : "") +
     '<div class="kpis">' + kpi("HHT acumuladas", T.hht, "horas-hombre trabajadas", "") + kpi("Acc. incapacitantes + mortales", T.acc, "numerador del IF", T.acc ? "bad" : "ok") + kpi("Días perdidos", T.dp, "desde descansos médicos AT", T.dp ? "warn" : "ok") +
     kpi("IF anual", T.IF.toFixed(2), "meta ≤ " + CONFIG.META_IF, T.IF <= CONFIG.META_IF ? "ok" : "bad", null, null, 2) + kpi("IS anual", T.IS.toFixed(2), "meta ≤ " + CONFIG.META_IS, T.IS <= CONFIG.META_IS ? "ok" : "bad", null, null, 2) + kpi("IA anual", T.IA.toFixed(2), "IF × IS / 1000", "", null, null, 2) + '</div>' +
     '<div class="card mb"><h3>Índices mensuales ' + anio + (ed ? ' <small>— edita HHT y N.° de trabajadores; lo demás es automático</small>' : "") + '</h3><div class="tbl-wrap"><table class="t"><thead><tr><th>Mes</th><th class="num">N.° trab.</th><th class="num">HHT</th><th class="num">Eventos</th><th class="num">Acc. leves</th><th class="num">Incidentes</th><th class="num">Acc. incap./mort.</th><th class="num">Días perdidos</th><th class="num">IF</th><th class="num">IS</th><th class="num">IA</th></tr></thead><tbody>' +
     I.filas.map(function (f) {
-      return '<tr><td><b>' + f.mes + '</b></td><td class="num">' + (ed ? inp(f.trab, "guardarHHT(" + f.n + ",null,this.value)", 70) : f.trab) + '</td><td class="num">' + (ed ? inp(f.hht, "guardarHHT(" + f.n + ",this.value,null)", 96) : fmt(f.hht)) + '</td>' +
+      return '<tr><td><b>' + f.mes + '</b></td><td class="num">' + (ed ? inp(f.trab, f.n, "trab", 70) : f.trab) + '</td><td class="num">' + (ed ? inp(f.hht, f.n, "hht", 96) : fmt(f.hht)) + '</td>' +
         '<td class="num">' + f.eventos + '</td><td class="num">' + f.leves + '</td><td class="num">' + f.inc + '</td><td class="num">' + f.acc + '</td><td class="num">' + f.dp + '</td>' +
         '<td class="num ' + (f.IF > CONFIG.META_IF ? "t-bad" : "") + '">' + fmt(f.IF, 2) + '</td><td class="num ' + (f.IS > CONFIG.META_IS ? "t-bad" : "") + '">' + fmt(f.IS, 2) + '</td><td class="num">' + fmt(f.IA, 2) + '</td></tr>';
     }).join("") + '<tr class="tot"><td>TOTAL</td><td></td><td class="num">' + fmt(T.hht) + '</td><td class="num">' + T.eventos + '</td><td class="num">' + T.leves + '</td><td class="num">' + T.inc + '</td><td class="num">' + T.acc + '</td><td class="num">' + T.dp + '</td><td class="num">' + fmt(T.IF, 2) + '</td><td class="num">' + fmt(T.IS, 2) + '</td><td class="num">' + fmt(T.IA, 2) + '</td></tr></tbody></table></div>' +
@@ -847,10 +847,28 @@ Views.indicadores = function () {
     options: { scales: { y: { title: { display: true, text: "IF" } }, y1: { position: "right", grid: { display: false }, title: { display: true, text: "IS" } } } } });
   chart("chIA", { type: "bar", data: { labels: MESES, datasets: [{ label: "IA", data: I.filas.map(function (f) { return +f.IA.toFixed(2); }), backgroundColor: "#7c3aed", borderRadius: 6 }] }, options: { plugins: { legend: { display: false } } } });
 };
-function guardarHHT(mes, hht, trab) {
-  var h = clone(S.hht.filter(function (x) { return +x.anio === S.anio && +x.mes === mes; })[0] || { anio: S.anio, mes: mes, hht: 0, trabajadores: 0 });
-  if (hht != null) h.hht = Number(hht || 0); if (trab != null) h.trabajadores = Number(trab || 0);
-  App.guardar("hht", h).then(function (r) { if (r) { toast("HHT " + MESES[mes - 1] + " guardadas", "ok"); App.route(); } });
+/* Cada fila guarda sus DOS valores juntos (trabajadores y HHT), en cola por mes para que dos guardados no se pisen,
+   y la tabla se recalcula recién al salir de ella: así no se pierde lo que se está escribiendo en otra casilla. */
+var HHTQ = {};
+function guardarHHT(mes) {
+  var val = function (k) { var el = $('#view input[data-mes="' + mes + '"][data-k="' + k + '"]'); return el ? Number(el.value || 0) : null; };
+  var anio = S.anio, trab = val("trab"), hht = val("hht");
+  HHTQ[mes] = (HHTQ[mes] || Promise.resolve()).then(function () {
+    var h = clone(S.hht.filter(function (x) { return +x.anio === anio && +x.mes === mes; })[0] || { anio: anio, mes: mes, hht: 0, trabajadores: 0 });
+    if (hht != null) h.hht = hht; if (trab != null) h.trabajadores = trab;
+    return API.call("guardar", { entidad: "hht", registro: h }).then(function (r) {
+      if (!r.ok) { toast(r.msg || r.error, "bad"); if (r.error === "sesion_invalida") App.logout(); return; }
+      App.reemplazar("hht", r.registro); toast(MESES[mes - 1] + ": " + fmt(r.registro.trabajadores || 0) + " trabajadores · " + fmt(r.registro.hht || 0) + " HHT guardadas", "ok");
+      refrescarHHT();
+    });
+  }).catch(function () { toast("No se pudo guardar " + MESES[mes - 1] + ". Revisa tu conexión.", "bad"); });
+}
+function refrescarHHT() {
+  var t = $("#view table.t"); if (!t || location.hash.indexOf("#/indicadores") !== 0) return;
+  var ahora = function () { var y = window.scrollY; App.route(); window.scrollTo(0, y); };
+  if (!t.contains(document.activeElement)) return ahora();
+  if (t._esperando) return; t._esperando = true;                     // se sigue escribiendo: recalcula al salir de la tabla
+  t.addEventListener("focusout", function f() { setTimeout(function () { if (!t.contains(document.activeElement)) { t.removeEventListener("focusout", f); ahora(); } }, 0); });
 }
 function exportarInd() {
   var I = L.indicadores(S.anio), r = [["Mes","N° trabajadores","HHT","Eventos","Acc. leves","Incidentes","Acc. incapacitantes+mortales","Días perdidos","IF","IS","IA"]];

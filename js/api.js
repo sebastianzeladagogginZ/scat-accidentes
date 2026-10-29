@@ -15,7 +15,7 @@ var CONFIG = {
   META_IF: 5, META_IS: 100,  // metas anuales para los medidores del tablero
   SELFIE_PX: 260, FIRMA_W: 420, FIRMA_H: 150
 };
-var APP_VERSION = "V3.9.3";
+var APP_VERSION = "V3.9.4";
 // Solo en el equipo de desarrollo (localhost): ?demo usa los datos de ejemplo y nunca toca la base real.
 if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && /[?&]demo/.test(location.search)) CONFIG.ENDPOINT_URL = "";
 
