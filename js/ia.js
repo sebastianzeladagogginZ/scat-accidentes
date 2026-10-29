@@ -233,7 +233,20 @@ var IA = {
         '<button class="btn ghost" onclick="document.getElementById(\'iaCarpeta\').click()">📁 Cargar modelo desde carpeta</button>' +
         '<input type="file" id="iaCarpeta" webkitdirectory multiple hidden onchange="IA.elegirCarpeta(this)"></div>' +
         '<p class="small muted mt">¿La red bloquea la descarga? Baja los archivos del modelo en otra computadora, cópialos a una carpeta de este equipo y elígela aquí. Después de la primera carga queda guardado en el navegador.</p>' : "") +
-      '<div class="flex mt"><button class="btn ghost" onclick="AN.medir()">🧪 Medir precisión de las sugerencias SCAT</button></div></div>';
+      '<div class="flex mt"><button class="btn ghost" onclick="AN.medir()">🧪 Medir precisión de las sugerencias SCAT</button><button class="btn ghost" id="iaQuitar2b" hidden onclick="IA.quitarGuardado(&quot;2b&quot;)">🗑 Quitar el modelo 2B guardado (1,4 GB)</button></div></div>';
+  },
+  /* Borra del navegador la copia guardada de un modelo (libera espacio; la carpeta original no se toca). */
+  quitarGuardado: function (k) {
+    if (!navigator.storage || !navigator.storage.getDirectory) return;
+    navigator.storage.getDirectory().then(function (r) { return r.removeEntry("modelo-" + k, { recursive: true }); }).then(function () {
+      if (IA.conf().modelo === k) { IA.guardar("modelo", "08b"); IA.pipe = null; IA.carpeta = null; }
+      toast("Modelo " + (k === "2b" ? "2B" : "0.8B") + " quitado de este equipo.", "ok"); Views.cuenta();
+    }).catch(function (e) { toast("No se pudo quitar: " + (e && e.message || e), "bad"); });
+  },
+  revisarGuardados: function () {                                     // muestra el botón solo si el 2B está guardado
+    if (!navigator.storage || !navigator.storage.getDirectory) return;
+    navigator.storage.getDirectory().then(function (r) { return r.getDirectoryHandle("modelo-2b"); })
+      .then(function () { var b = document.getElementById("iaQuitar2b"); if (b) b.hidden = false; }).catch(function () {});
   },
   NECESARIOS: ["config.json", "generation_config.json", "tokenizer.json", "tokenizer_config.json", "embed_tokens_q4f16.onnx", "embed_tokens_q4f16.onnx_data", "decoder_model_merged_q4f16.onnx", "decoder_model_merged_q4f16.onnx_data"],
   /* Copia del modelo en el almacenamiento privado del navegador (persistente, sin permisos ni internet). */

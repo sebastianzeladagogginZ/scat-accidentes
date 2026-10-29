@@ -938,4 +938,5 @@ Views.cuenta = function () {
     '<label class="pref"><span><b>Sonido de aviso</b><small>Dos notas suaves cuando llega una tarea nueva a «Mis pendientes».</small></span><input type="checkbox" class="sw" ' + (AVISOS.conf().sonido ? "checked" : "") + ' onchange="AVISOS.guardar(\'sonido\',this.checked);if(this.checked)AVISOS.sonar()"></label>' +
     '<label class="pref"><span><b>Vibración</b><small>En celulares Android, el teléfono vibra al llegar una tarea nueva.</small></span><input type="checkbox" class="sw" ' + (AVISOS.conf().vibrar ? "checked" : "") + ' onchange="AVISOS.guardar(\'vibrar\',this.checked)"></label>' +
     '<p class="small muted mt">La app revisa si hay tareas nuevas cada 5 minutos mientras está abierta.</p></div>' + IA.panel();
+  IA.revisarGuardados();
 };
