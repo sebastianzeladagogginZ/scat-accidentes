@@ -15,7 +15,7 @@ var CONFIG = {
   META_IF: 5, META_IS: 100,  // metas anuales para los medidores del tablero
   SELFIE_PX: 260, FIRMA_W: 420, FIRMA_H: 150
 };
-var APP_VERSION = "V3.9.4";
+var APP_VERSION = "V3.9.5";
 // Solo en el equipo de desarrollo (localhost): ?demo usa los datos de ejemplo y nunca toca la base real.
 if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && /[?&]demo/.test(location.search)) CONFIG.ENDPOINT_URL = "";
 
@@ -24,9 +24,17 @@ var API = {
   call: function (action, payload) {
     var body = Object.assign({ action: action, token: API.token }, payload || {});
     if (!CONFIG.ENDPOINT_URL) return new Promise(function (res) { setTimeout(function () { res(MOCK.handle(JSON.parse(JSON.stringify(body)))); }, 60); });
-    return fetch(CONFIG.ENDPOINT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) })
+    if (navigator.onLine === false) return Promise.resolve({ ok: false, error: "red", msg: "No hay conexión a internet. Vuelve a intentarlo cuando se recupere." });
+    // Límite de espera: una conexión colgada (datos móviles) no deja la app «Guardando…» indefinidamente.
+    var ctl = window.AbortController ? new AbortController() : null, lim = action === "subir" ? 90000 : 45000;
+    var t = ctl ? setTimeout(function () { ctl.abort(); }, lim) : null;
+    return fetch(CONFIG.ENDPOINT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body), signal: ctl ? ctl.signal : undefined })
       .then(function (r) { return r.json(); })
-      .catch(function () { return { ok: false, error: "red", msg: "Sin conexión con el servidor. Revisa tu internet." }; });
+      .then(function (j) { clearTimeout(t); return j; }, function () {
+        clearTimeout(t);
+        if (ctl && ctl.signal.aborted) return { ok: false, error: "tiempo", msg: "El servidor no respondió a tiempo. Se recargarán los datos para comprobar si el cambio se guardó antes de volver a intentarlo." };
+        return { ok: false, error: "red", msg: "Sin conexión con el servidor. Revisa tu internet." };
+      });
   },
   /* Áreas ▸ divisiones desde el Panel SSOMA (con caché local y respaldo) */
   areasPanel: function () {

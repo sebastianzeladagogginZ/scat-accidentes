@@ -295,6 +295,9 @@ var App = {
     try { localStorage.removeItem("scat_equipos"); } catch (e) {} RECIENTES.borrar();                         // formato anterior (v2.2)
     try { Object.keys(localStorage).forEach(function (k) { if (/^scat_(vistos|tour)_\d+$/.test(k) || /^scat_tour_[0-9A-F]{8}$/.test(k)) localStorage.removeItem(k); }); } catch (e) {}   // claves con DNI en claro
     window.addEventListener("hashchange", App.navegar);
+    // Aviso inmediato al perder o recuperar internet (al volver, se actualizan los datos en segundo plano).
+    window.addEventListener("offline", function () { if (S.user) toast("Sin conexión: puedes seguir consultando, pero para guardar cambios espera a que vuelva internet.", "bad"); });
+    window.addEventListener("online", function () { if (S.user) { toast("Conexión restablecida", "ok"); App.cargar(); } });
     API.areasPanel().then(function (fuente) { S.fuenteAreas = fuente; });
     var t = null; try { t = sessionStorage.getItem("scat_tk"); } catch (e) {}
     if (t) { API.token = t; App.cargar().then(function (ok) { if (!ok) App.mostrarLogin(); }); } else App.mostrarLogin();
@@ -318,35 +321,57 @@ var App = {
       listo();
       if (!r.ok) { $("#lgErr").textContent = r.msg || "No se pudo ingresar."; $(".login-card").classList.add("shake"); setTimeout(function () { $(".login-card").classList.remove("shake"); }, 400); return; }
       API.token = r.token; try { sessionStorage.setItem("scat_tk", r.token); } catch (x) {}
-      App.cargar();
+      if (r.datos && r.datos.ok) { App.guardarSnap(r.datos); App.aplicarDatos(r.datos); } else App.cargar(true);
     });
   },
-  logout: function () { API.call("logout"); API.token = null; try { sessionStorage.removeItem("scat_tk"); } catch (e) {} S.user = null; DOCS.cache = {}; location.hash = ""; App.mostrarLogin(); },
-  cargar: function () {
-    ESQ.mostrar();
+  logout: function () { API.call("logout"); API.token = null; App.olvidarSesion(); App._listo = false; S.user = null; DOCS.cache = {}; location.hash = ""; App.mostrarLogin(); },
+  /* Carga de datos. Con una copia de esta misma sesión (sessionStorage, se borra al cerrar la pestaña) la app se muestra
+     al instante y se actualiza en segundo plano; sin copia, muestra el esqueleto mientras llega el servidor. */
+  SNAP: "scat_snap",
+  cargar: function (fresco) {
+    var snap = null; try { snap = JSON.parse(sessionStorage.getItem(App.SNAP) || "null"); } catch (e) {}
+    var conSnap = !fresco && snap && snap.tk === API.token && snap.r && snap.r.ok;
+    if (conSnap && !App._listo) App.aplicarDatos(snap.r); else if (!App._listo) ESQ.mostrar();
     return API.call("bootstrap").then(function (r) {
       if (!r.ok) {
-        if (r.error === "sesion_invalida") { try { sessionStorage.removeItem("scat_tk"); } catch (e) {} App.mostrarLogin(); }
-        else { toast(r.msg || r.error, "bad"); $("#view").innerHTML = vacioHTML("alertas", "No se pudo cargar la información", "Revisa tu conexión a internet e inténtalo otra vez.", '<button class="btn primary mt" onclick="App.cargar()">Reintentar</button>'); }
+        if (r.error === "sesion_invalida") { App.olvidarSesion(); App.mostrarLogin(); return false; }
+        if (conSnap) { toast("Sin conexión con el servidor: se muestran los datos de hace " + haceCuanto(new Date(snap.ts).toISOString()) + ".", "bad"); return true; }
+        toast(r.msg || r.error, "bad"); $("#view").innerHTML = vacioHTML("alertas", "No se pudo cargar la información", "Revisa tu conexión a internet e inténtalo otra vez.", '<button class="btn primary" onclick="App.recargar()">Reintentar</button>');
         return false;
       }
-      S.user = r.user; S.eventos = r.eventos; S.acciones = r.acciones; S.descansos = r.descansos; S.hht = r.hht; S.equipo = r.equipo; S.firmasResumen = r.firmasResumen || {};
-      S.eventos.sort(function (a, b) { return (b.fecha + b.hora) < (a.fecha + a.hora) ? -1 : 1; });
-      $("#login").hidden = true; $("#app").hidden = false;
-      $("#uNom").textContent = S.user.nombre; $("#uRol").textContent = S.user.cargo || (CAT.roles[S.user.rol] || {}).t || S.user.rol; $("#uAv").textContent = iniciales(S.user.nombre);
-      TEMA.aplicar(); App.route(); AVISOS.iniciar();
-      HIST.servidorListo().then(function (ok) { S.srv24 = ok; });
-      IA.revisar().then(function () { IA.adornar($("#view")); });      // ¿el equipo puede usar el asistente IA local?     // los campos clínicos nuevos solo se muestran si el servidor ya los protege
+      App.guardarSnap(r);
+      var huella = function (x) { var c = Object.assign({}, x); delete c.server_ts; return JSON.stringify(c); };
+      if (conSnap && huella(snap.r) === huella(r)) return true;                       // nada cambió: no se repinta
+      App.aplicarDatos(r, conSnap);
       return true;
     });
   },
-  recargar: function () { DOCS.cache = {}; return App.cargar(); },
+  guardarSnap: function (r) { try { sessionStorage.setItem(App.SNAP, JSON.stringify({ tk: API.token, ts: Date.now(), r: r })); } catch (e) { try { sessionStorage.removeItem(App.SNAP); } catch (x) {} } },
+  olvidarSesion: function () { try { sessionStorage.removeItem("scat_tk"); sessionStorage.removeItem(App.SNAP); } catch (e) {} },
+  aplicarDatos: function (r, suave) {
+    S.user = r.user; S.eventos = r.eventos; S.acciones = r.acciones; S.descansos = r.descansos; S.hht = r.hht; S.equipo = r.equipo; S.firmasResumen = r.firmasResumen || {};
+    S.eventos.sort(function (a, b) { return (b.fecha + b.hora) < (a.fecha + a.hora) ? -1 : 1; });
+    if (App._listo) {
+      // Datos nuevos con la app ya abierta: se repinta solo si no interrumpe (sin ventanas abiertas, sin escribir, sin análisis a medias).
+      var ocupado = $(".modal-bg") || (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && $("#view").contains(document.activeElement)) || EV.draft;
+      if (suave && ocupado) return;
+      var y = window.scrollY; App.route(); if (suave) window.scrollTo(0, y); return;
+    }
+    App._listo = true;
+    $("#login").hidden = true; $("#app").hidden = false;
+    $("#uNom").textContent = S.user.nombre; $("#uRol").textContent = S.user.cargo || (CAT.roles[S.user.rol] || {}).t || S.user.rol; $("#uAv").textContent = iniciales(S.user.nombre);
+    TEMA.aplicar(); App.route(); AVISOS.iniciar();
+    setTimeout(function () { CHARTJS.cargar().catch(function () {}); }, 2500);      // se adelanta en segundo plano para que el Tablero abra al instante
+    HIST.servidorListo().then(function (ok) { S.srv24 = ok; });
+    IA.revisar().then(function () { IA.adornar($("#view")); });      // ¿el equipo puede usar el cerebro artificial?
+  },
+  recargar: function () { DOCS.cache = {}; return App.cargar(true); },
   reemplazar: function (ent, reg) { var arr = S[ent], i = arr.findIndex(function (x) { return x.id === reg.id; }); if (i >= 0) arr[i] = reg; else arr.unshift(reg); },
   guardar: function (ent, reg) {
     loading(true, "Guardando…");
     return API.call("guardar", { entidad: ent, registro: reg }).then(function (r) {
       loading(false);
-      if (!r.ok) { toast(r.msg || r.error, "bad"); if (r.error === "conflicto") App.recargar(); if (r.error === "sesion_invalida") App.logout(); return null; }
+      if (!r.ok) { toast(r.msg || r.error, "bad"); if (r.error === "conflicto" || r.error === "tiempo") App.recargar(); if (r.error === "sesion_invalida") App.logout(); return null; }
       App.reemplazar(ent, r.registro); return r.registro;
     });
   },
@@ -411,6 +436,16 @@ var App = {
     }
     else App.route();
   },
+  /* Accesibilidad (VoiceOver / TalkBack): todo campo sin etiqueta recibe un nombre a partir de su contexto. */
+  etiquetar: function (root) {
+    $$("input, select, textarea", root || document).forEach(function (e) {
+      if ((e.labels && e.labels.length) || e.getAttribute("aria-label") || e.placeholder || e.title || e.type === "hidden") return;
+      var n = "";
+      if (e.dataset.mes) n = (e.dataset.k === "hht" ? "Horas-hombre trabajadas de " : "Número de trabajadores de ") + MESES[+e.dataset.mes - 1];
+      else if (e.tagName === "SELECT" && e.options.length) n = String(e.options[0].text).split(":")[0].trim() || "Filtro";
+      if (n) e.setAttribute("aria-label", n);
+    });
+  },
   route: function () {
     if (!S.user) return;
     charts.forEach(function (c) { c.destroy(); }); charts = [];
@@ -428,7 +463,7 @@ var App = {
       if (p[1] && v === "acciones" && S.acciones.some(function (a) { return a.id === p[1]; })) { ACC.editar(p[1]); history.replaceState(null, "", "#/acciones"); }
       window.scrollTo(0, 0);
     }
-    NAV.barra(p); if (PRES.activo) PRES.marcar(v); AVISOS.titulo(); IA.adornar($("#view"));
+    NAV.barra(p); if (PRES.activo) PRES.marcar(v); AVISOS.titulo(); IA.adornar($("#view")); App.etiquetar($("#view"));
     if (TOUR.pendiente() && !$(".modal-bg")) setTimeout(TOUR.abrir, 400);
   }
 };
@@ -497,8 +532,15 @@ var UI = {
     });
   }
 };
+/* Chart.js se descarga recién cuando una pantalla tiene gráficos (Tablero, Indicadores): el ingreso no lo espera. */
+var CHARTJS = { url: "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js", p: null,
+  cargar: function () {
+    if (window.Chart) return Promise.resolve();
+    return CHARTJS.p || (CHARTJS.p = new Promise(function (ok, mal) { var s = document.createElement("script"); s.src = CHARTJS.url; s.onload = ok; s.onerror = function () { CHARTJS.p = null; mal(); }; document.head.appendChild(s); }));
+  } };
 function chart(id, cfg) {
-  var el = document.getElementById(id); if (!el || !window.Chart) return;
+  var el = document.getElementById(id); if (!el) return;
+  if (!window.Chart) { CHARTJS.cargar().then(function () { if (document.body.contains(el)) chart(id, cfg); }, function () {}); return; }
   var osc = document.documentElement.getAttribute("data-theme") === "dark";
   Chart.defaults.font.family = "Inter, system-ui, sans-serif"; Chart.defaults.color = osc ? "#a7b6c9" : "#64748b"; Chart.defaults.borderColor = osc ? "rgba(148,163,184,.16)" : "rgba(0,0,0,.08)";
   cfg.options = Object.assign({ responsive: true, maintainAspectRatio: false, animation: { duration: 700 }, plugins: {} }, cfg.options || {});
@@ -938,7 +980,7 @@ var USR = {
         return API.call("usuario_guardar", { usuario: o }).then(function (r) {
           if (!r.ok) { toast(r.msg || r.error, "bad"); return false; }
           if (r.temporal) modal({ title: "Usuario creado", body: '<div class="callout ok"><span>✓</span><div><b>Acceso habilitado</b>Ya puede ingresar escribiendo su ' + tipoDoc(o.dni) + ' <b>' + esc(o.dni) + '</b> en la pantalla de ingreso.</div></div>', cancel: "Listo" });
-          App.cargar().then(function () { location.hash = "#/usuarios"; Views.usuarios(); });
+          App.cargar(true).then(function () { location.hash = "#/usuarios"; Views.usuarios(); });
         });
       } });
   }

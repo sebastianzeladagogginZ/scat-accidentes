@@ -153,7 +153,9 @@ var HIST = {
   /* El servidor debe ser 2.4 o superior (entiende «historico»: expediente cerrado y sin correos). */
   servidorListo: function () {
     if (!CONFIG.ENDPOINT_URL) return Promise.resolve(true);
-    return fetch(CONFIG.ENDPOINT_URL).then(function (r) { return r.json(); }).then(function (j) { var v = String(j.version || "0").split(".").map(Number); return v[0] > 2 || (v[0] === 2 && v[1] >= 4); }).catch(function () { return false; });
+    try { if (sessionStorage.getItem("scat_srv24") === "1") return Promise.resolve(true); } catch (e) {}   // una sola consulta por sesión
+    return fetch(CONFIG.ENDPOINT_URL).then(function (r) { return r.json(); }).then(function (j) { var v = String(j.version || "0").split(".").map(Number), ok = v[0] > 2 || (v[0] === 2 && v[1] >= 4);
+      if (ok) try { sessionStorage.setItem("scat_srv24", "1"); } catch (e) {} return ok; }).catch(function () { return false; });
   },
   importar: function (m) {
     var lista = HIST._lista || [], i = 0, ok = 0, err = [], box = $("#hiPrev", m);

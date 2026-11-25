@@ -13,9 +13,11 @@
 <link rel="preconnect" href="https://script.google.com" crossorigin>
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- La fuente no bloquea el primer pintado: se muestra la del sistema y se cambia a Inter apenas llega -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"></noscript>
 <title>SCAT · Gestión de Accidentes · Optical Networks</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{
   --navy:#0b2540; --navy2:#0f3257; --brand:#0c4a6e; --brand2:#0284c7; --brand3:#38bdf8; --on:#F28C28; --on2:#fbbf24;
@@ -907,6 +909,19 @@ body.presenta .rk{gap:10px} body.presenta .rk-r{padding:12px 12px;grid-template-
   #toasts{left:12px;right:12px}
 }
 @media print{body *{visibility:hidden}}
+
+/* ---- Táctil (celular y tablet): objetivos de toque de 42 px+, sin zoom de iOS al escribir y respuesta inmediata al tocar ---- */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,a,label,select,.chk,.rc,[onclick]{touch-action:manipulation}
+@media (pointer:coarse){
+  input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{font-size:16px!important}
+  .gq-b button,.psc button{min-height:42px;min-width:50px;padding:8px 14px;font-size:14px}
+  .gq-b{gap:6px}
+  .btn{min-height:42px}
+  .btn.sm{min-height:38px}
+  .kpi.link,.card[onclick],[class*="pend"][onclick],.ev-card,.cmdk-i,.nav a{transition:transform .12s ease,background-color .12s ease}
+  .kpi.link:active,.card[onclick]:active,[class*="pend"][onclick]:active,.ev-card:active,.cmdk-i:active,.nav a:active{transform:scale(.98)}
+}
 </style>
 </head>
 <body>
@@ -999,17 +1014,17 @@ body.presenta .rk{gap:10px} body.presenta .rk-r{padding:12px 12px;grid-template-
 <div id="toasts" aria-live="polite"></div>
 <div class="loading" id="loading" hidden><div class="load-box"><div class="spin"></div><span id="loadTxt"></span></div></div>
 
-<script src="js/catalogos.js?v=3.9.4"></script>
-<script src="js/api.js?v=3.9.4"></script>
-<script src="js/app.js?v=3.9.4"></script>
-<script src="js/firma.js?v=3.9.4"></script>
-<script src="js/docs.js?v=3.9.4"></script>
-<script src="js/evento.js?v=3.9.4"></script>
-<script src="js/guia.js?v=3.9.4"></script>
-<script src="js/historico.js?v=3.9.4"></script>
-<script src="js/ia.js?v=3.9.4"></script>
-<script src="js/analisis.js?v=3.9.4"></script>
-<script src="js/tablero.js?v=3.9.4"></script>
+<script src="js/catalogos.js?v=3.9.5"></script>
+<script src="js/api.js?v=3.9.5"></script>
+<script src="js/app.js?v=3.9.5"></script>
+<script src="js/firma.js?v=3.9.5"></script>
+<script src="js/docs.js?v=3.9.5"></script>
+<script src="js/evento.js?v=3.9.5"></script>
+<script src="js/guia.js?v=3.9.5"></script>
+<script src="js/historico.js?v=3.9.5"></script>
+<script src="js/ia.js?v=3.9.5"></script>
+<script src="js/analisis.js?v=3.9.5"></script>
+<script src="js/tablero.js?v=3.9.5"></script>
 <script>App.init();</script>
 </body>
 </html>

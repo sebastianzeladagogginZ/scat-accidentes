@@ -152,7 +152,7 @@ var TAB = {
 
   /* Gráfico mensual: barras apiladas en UNA sola escala (sin segundo eje). */
   graficos: function (D) {
-    if (!window.Chart || !document.getElementById("chMes")) return;
+    if (!document.getElementById("chMes")) return;
     var osc = TAB.osc(), sup = osc ? "#111b2a" : "#ffffff";
     var ds = TAB.FAM.map(function (f) {
       return { label: f.t, data: D.mes.map(function (m) { return m.filter(function (e) { return f.tipos.indexOf(e.tipo) >= 0; }).length; }), backgroundColor: f.c[osc ? 1 : 0],
@@ -165,7 +165,7 @@ var TAB = {
   },
 
   grafHist: function (D) {
-    if (!window.Chart || !document.getElementById("chHist")) return;
+    if (!document.getElementById("chHist")) return;
     var osc = TAB.osc(), P = D.pat;
     chart("chHist", { type: "bar", data: { labels: MESES, datasets: [
         { label: "Año " + D.anio, data: P.act, backgroundColor: osc ? "#3987e5" : "#2a78d6", borderRadius: 4, maxBarThickness: 22 },

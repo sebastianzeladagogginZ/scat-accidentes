@@ -227,7 +227,7 @@ var IA = {
       '<p class="small muted" style="margin-top:-6px">Ordena relatos y sugiere causas SCAT. Funciona dentro de esta computadora: los datos no salen del equipo.</p>' +
       '<div class="plazo"><span>Este equipo</span>' + est + '</div>' +
       (IA.estado === "compatible" ? '<label class="pref"><span><b>Usar el cerebro artificial en este equipo</b><small>Muestra los botones 🧠 en el reporte y en el análisis SCAT.</small></span><input type="checkbox" class="sw" ' + (c.activo ? "checked" : "") + ' onchange="IA.guardar(\'activo\',this.checked);Views.cuenta()"></label>' +
-        '<div class="pref"><span><b>Modelo</b><small>El liviano responde en segundos en laptops de oficina. El 2B redacta mejor, pero necesita una tarjeta gráfica más potente.</small></span><select onchange="IA.guardar(\'modelo\',this.value);IA.pipe=null;toast(\'Modelo cambiado\',\'ok\')">' +
+        '<div class="pref"><span><b>Modelo</b><small>El liviano responde en segundos en laptops de oficina. El 2B redacta mejor, pero necesita una tarjeta gráfica más potente.</small></span><select aria-label="Modelo del cerebro artificial" onchange="IA.guardar(\'modelo\',this.value);IA.pipe=null;toast(\'Modelo cambiado\',\'ok\')">' +
         Object.keys(IA.MODELOS).map(function (k) { return '<option value="' + k + '"' + (c.modelo === k ? " selected" : "") + '>' + IA.MODELOS[k].t + ' · ' + IA.MODELOS[k].peso + '</option>'; }).join("") + '</select></div>' +
         '<div class="flex mt"><button class="btn primary" onclick="IA.probar()">🧠 Probar velocidad en este equipo</button>' +
         '<button class="btn ghost" onclick="document.getElementById(\'iaCarpeta\').click()">📁 Cargar modelo desde carpeta</button>' +
