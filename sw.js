@@ -1,6 +1,6 @@
 /* Service worker: la app abre al instante desde el equipo (los datos SIEMPRE van a la red).
    Subir CACHE con cada publicación: es también la versión de los archivos (?v=) que se guardan. */
-var CACHE = "scat-on-v3.9.5";
+var CACHE = "scat-on-v3.9.6";
 var V = CACHE.replace("scat-on-v", "");
 var JS = ["catalogos", "api", "app", "firma", "docs", "evento", "guia", "historico", "ia", "analisis", "tablero"];
 var ARCHIVOS = ["./", "index.html", "img/logo.svg", "img/logo-oscuro.svg", "img/logo.png", "img/icon.svg", "manifest.json"]

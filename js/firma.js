@@ -50,7 +50,7 @@ var FIRMA = {
           function fit() {
             var r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
             cv.width = r.width * dpr; cv.height = r.height * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctx.lineWidth = 2.6; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#0b2540";
+            ctx.lineWidth = 2.6; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#231c19";
           }
           setTimeout(fit, 30);
           function pos(e) { var r = cv.getBoundingClientRect(), t = e.touches ? e.touches[0] : e; return { x: t.clientX - r.left, y: t.clientY - r.top }; }
@@ -115,7 +115,7 @@ var FIRMA = {
     return '<div class="fb' + (alterado ? " alt" : "") + '"><img class="fb-ph" src="' + img(f.selfie) + '" alt="selfie"><div class="fb-d"><b>' + esc(f.nombre) + '</b><span>Cargo: ' + esc(f.cargo || slot.rol) + '</span><span>Documento: ' + esc(f.dni || "—") + '</span><span>Fecha y hora: ' + FIRMA.fechaHora(f.ts) + '</span>' +
       (opts.pdf ? "" : '<span class="small muted">' + esc(slot.rol) + (f.por_nombre && f.por_nombre !== f.nombre ? " · capturada por " + esc(f.por_nombre) : "") + '</span>') +
       (alterado ? '<span class="req-t">⚠ El documento cambió después de esta firma</span>' : "") + '</div>' +
-      '<div class="fb-s"><img src="' + img(f.firma) + '" alt="firma"><small>Firma del responsable</small>' + (opts.pdf ? '<small style="font-size:7px;color:#94a3b8">Huella ' + esc(f.hash || "") + '</small>' : "") +
+      '<div class="fb-s"><img src="' + img(f.firma) + '" alt="firma"><small>Firma del responsable</small>' + (opts.pdf ? '<small style="font-size:7px;color:#a2968d">Huella ' + esc(f.hash || "") + '</small>' : "") +
       (opts.boton ? '<button class="btn sm" style="margin-top:4px" onclick="' + opts.boton + '">↺ Volver a firmar</button>' : "") + '</div></div>';
   },
   /* Bloque de firma para el PDF: tabla de 3 columnas (selfie · datos · firma), estable en cualquier dispositivo. */

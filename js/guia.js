@@ -110,7 +110,7 @@ var GUIA = {
     var pg = L.pasos(ev), m = {}; pg.pasos.forEach(function (p) { m[p.k] = p; });
     var fs = FASES.map(function (f) {
       var ps = f.k.map(function (k) { return m[k]; }).filter(function (p) { return p && !p.na; });
-      return { n: f.n, t: f.t, ok: ps.every(function (p) { return p.ok; }), hechos: ps.filter(function (p) { return p.ok; }).length, total: ps.length, tab: (ps.filter(function (p) { return !p.ok; })[0] || ps[0] || {}).tab || "resumen" };
+      return { n: f.n, t: f.t, ok: ps.every(function (p) { return p.ok; }) || (f.n === 6 && ev.estado === "Cerrado") /* cerrado = la fase de cierre ocurrió */, hechos: ps.filter(function (p) { return p.ok; }).length, total: ps.length, tab: (ps.filter(function (p) { return !p.ok; })[0] || ps[0] || {}).tab || "resumen" };
     });
     var cur = fs.filter(function (f) { return !f.ok; })[0] || null;
     return { fases: fs, cur: cur, pct: pg.pct, sig: GUIA.siguiente(ev, pg) };
@@ -467,7 +467,7 @@ var TEMA = {
   aplicar: function (enApp) {
     var osc = enApp !== false && TEMA.actual() === "oscuro";
     if (osc) document.documentElement.setAttribute("data-theme", "dark"); else document.documentElement.removeAttribute("data-theme");
-    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = osc ? "#0b1320" : "#0b2540";
+    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = osc ? "#120e0c" : "#231c19";
     var b = $("#btnTema"); if (b) { b.innerHTML = svg(osc ? "sol" : "luna"); b.title = osc ? "Cambiar a modo claro" : "Cambiar a modo oscuro"; }
   },
   alternar: function () {

@@ -11,7 +11,7 @@ var EV = {
     EV.id = id; EV.tab = tab;
     var pg = L.pasos(ev), acc = L.accionesDe(id), dm = L.dmDe(id), s = ev.scat || {}, rg = CAT.riesgo(s.gravedad, s.probabilidad, s.exposicion), t = CAT.get("tipoEvento", ev.tipo) || {};
     App.titulo(ev.id + " · " + CAT.tipoTxt(ev.tipo), CAT.divDe(ev.area) + " · " + fFecha(ev.fecha) + " " + (ev.hora || ""), '<a class="btn" href="#/evento/' + id + '/formatos">🖊 <span class="hide-sm">Formatos PDF</span></a>');
-    var h = '<div class="ev-hero" style="--c:' + (t.color || "#0284c7") + '"><div class="evh-main"><div class="evh-id">' + esc(ev.id) + ' · ' + areaChip(ev.area) + '</div><h2>' + esc(ev.descripcion) + '</h2>' +
+    var h = '<div class="ev-hero" style="--c:' + (t.color || "#ee6a1f") + '"><div class="evh-main"><div class="evh-id">' + esc(ev.id) + ' · ' + areaChip(ev.area) + '</div><h2>' + esc(ev.descripcion) + '</h2>' +
       '<div class="meta">' + L.tipoPill(ev.tipo) + L.estadoPill(ev.estado) + (rg ? '<span class="pill ' + rg.color + '">Riesgo ' + rg.nivel + '</span>' : "") +
       '<span>👷 ' + esc(ev.trabajador || "sin trabajador") + '</span><span>📍 ' + esc(ev.lugar || ev.ambito || "—") + '</span><span>🩺 ' + L.diasPerdidos(id) + ' días perdidos</span></div></div>' +
       (EV.botonesFlujo(ev) ? '<div class="evh-actions">' + EV.botonesFlujo(ev) + '</div>' : "") + '</div>' + GUIA.html(ev);
@@ -109,13 +109,14 @@ EV.tabs = {};
 
 /* ---------- RESUMEN ---------- */
 EV.tabs.resumen = function (ev) {
-  var ed = EV.puede(ev), pg = L.pasos(ev), sug = L.tipoSugerido(ev), h = "";
+  var ed = EV.puede(ev), pg = L.pasos(ev), sug = L.tipoSugerido(ev), h = "", archivado = ["Cerrado", "Anulado"].indexOf(ev.estado) >= 0;   // un expediente archivado no pide acciones
   if (sug) h += '<div class="callout warn mb"><span>🤖</span><div><b>Sugerencia de clasificación: ' + esc(CAT.tipoTxt(sug.c)) + '</b>El evento ' + esc(sug.motivo) + '. ' + (ed ? '<button class="btn sm mt" onclick="EV.aplicarTipo(\'' + sug.c + '\')">Reclasificar</button>' : "") + '</div></div>';
   if (ev.estado === "Observado") { var ob = (ev.flujo || []).filter(function (f) { return f.a === "Observado"; }).pop(); if (ob) h += '<div class="callout bad mb"><span>↩</span><div><b>Observación de ' + esc(ob.por) + ' (' + fFechaHora(ob.ts) + ')</b>' + esc(ob.comentario) + '</div></div>'; }
   h += '<div class="row2 mb"><div class="card"><h3>Ruta del procedimiento <small>SST-PR-03</small></h3><div class="steps">' + pg.pasos.map(function (p) {
-      var next = pg.siguiente && pg.siguiente.k === p.k;
+      var next = !archivado && pg.siguiente && pg.siguiente.k === p.k;
       return '<div class="step ' + (p.na ? "na" : p.ok ? "done" : next ? "next" : "") + '"><span class="ic">' + (p.na ? "–" : p.ok ? "✓" : "") + '</span><span>' + esc(p.t) + (p.na ? ' <span class="small muted">(no aplica)</span>' : "") + '</span>' +
-        (!p.ok && !p.na ? '<a class="btn sm go ' + (next ? "primary" : "") + '" href="#/evento/' + esc(ev.id) + '/' + p.tab + '" data-k="' + p.k + '" onclick="GUIA.foco=this.dataset.k;if(location.hash===this.getAttribute(\'href\')){event.preventDefault();EV.ir(\'' + p.tab + '\')}">' + (next ? "Hacer ahora" : "Ir") + '</a>' : "") + '</div>';
+        (!p.ok && !p.na && archivado ? '<span class="small muted">no registrado</span>' : "") +
+        (!p.ok && !p.na && !archivado ? '<a class="btn sm go ' + (next ? "primary" : "") + '" href="#/evento/' + esc(ev.id) + '/' + p.tab + '" data-k="' + p.k + '" onclick="GUIA.foco=this.dataset.k;if(location.hash===this.getAttribute(\'href\')){event.preventDefault();EV.ir(\'' + p.tab + '\')}">' + (next ? "Hacer ahora" : "Ir") + '</a>' : "") + '</div>';
     }).join("") + '</div></div><div><div class="card"><h3>Plazos</h3>' + L.plazos(ev).map(function (p) {
       var c = { ok: ["ok","Cumplido"], tarde: ["warn","Fuera de plazo"], vencido: ["bad","Vencido"], pronto: ["warn","Por vencer"], pendiente: ["info","En plazo"], na: ["","—"] }[p.st];
       return '<div class="plazo"><span>' + esc(p.t) + '<br><span class="small muted">Límite ' + fFechaHora(p.lim.toISOString()) + (p.hecho ? " · hecho " + fFechaHora(p.hecho.toISOString()) : "") + '</span></span><span class="pill ' + c[0] + '">' + c[1] + '</span></div>';

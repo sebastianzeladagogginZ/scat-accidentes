@@ -41,13 +41,13 @@ CAT.naturaleza = ["Contusión / Golpe","Herida / Corte","Fractura","Esguince / L
 CAT.turno = ["Mañana","Tarde","Noche"];
 
 CAT.tipoEvento = [
-  {c:"AM",  t:"Accidente mortal",        cuentaIF:true,  mtpe24:true,  color:"#7f1d1d"},
-  {c:"AI",  t:"Accidente incapacitante", cuentaIF:true,  mtpe24:false, color:"#dc2626"},
-  {c:"AL",  t:"Accidente leve",          cuentaIF:false, mtpe24:false, color:"#f59e0b"},
-  {c:"IP",  t:"Incidente peligroso",     cuentaIF:false, mtpe24:true,  color:"#7c3aed"},
-  {c:"INC", t:"Incidente",               cuentaIF:false, mtpe24:false, color:"#0284c7"},
-  {c:"CA",  t:"Cuasi accidente",         cuentaIF:false, mtpe24:false, color:"#64748b"},
-  {c:"EO",  t:"Enfermedad ocupacional",  cuentaIF:false, mtpe24:false, color:"#16a34a"}
+  {c:"AM",  t:"Accidente mortal",        cuentaIF:true,  mtpe24:true,  color:"#57230c"},
+  {c:"AI",  t:"Accidente incapacitante", cuentaIF:true,  mtpe24:false, color:"#c42b1a"},
+  {c:"AL",  t:"Accidente leve",          cuentaIF:false, mtpe24:false, color:"#c98500"},
+  {c:"IP",  t:"Incidente peligroso",     cuentaIF:false, mtpe24:true,  color:"#b4490f"},
+  {c:"INC", t:"Incidente",               cuentaIF:false, mtpe24:false, color:"#ee6a1f"},
+  {c:"CA",  t:"Cuasi accidente",         cuentaIF:false, mtpe24:false, color:"#6b605a"},
+  {c:"EO",  t:"Enfermedad ocupacional",  cuentaIF:false, mtpe24:false, color:"#0b7a45"}
 ];
 
 /* ---- Bloque 1 · Potencial de pérdida ---- */

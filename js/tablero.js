@@ -6,10 +6,10 @@ var TAB = {
   /* Familias de evento para el gráfico mensual: 4 colores validados (claro y oscuro, daltonismo incluido).
      El orden de apilado es parte de la validación: rojo y amarillo nunca quedan juntos. */
   FAM: [
-    { k: "baja", t: "Con días perdidos", tipos: ["AM","AI"], c: ["#e34948", "#e66767"] },
-    { k: "inc", t: "Incidentes y cuasi accidentes", tipos: ["IP","INC","CA"], c: ["#2a78d6", "#3987e5"] },
-    { k: "leve", t: "Accidentes leves", tipos: ["AL"], c: ["#eda100", "#c98500"] },
-    { k: "eo", t: "Enfermedad ocupacional", tipos: ["EO"], c: ["#1baf7a", "#199e70"] }
+    { k: "baja", t: "Con días perdidos", tipos: ["AM","AI"], c: ["#c42b1a", "#ef5a47"] },
+    { k: "inc", t: "Incidentes y cuasi accidentes", tipos: ["IP","INC","CA"], c: ["#1b65c2", "#5b9bec"] },
+    { k: "leve", t: "Accidentes leves", tipos: ["AL"], c: ["#c98500", "#c98500"] },
+    { k: "eo", t: "Enfermedad ocupacional", tipos: ["EO"], c: ["#0b7a45", "#2fb173"] }
   ],
   osc: function () { return document.documentElement.getAttribute("data-theme") === "dark"; },
 
@@ -68,7 +68,7 @@ var TAB = {
   kpis: function (D) {
     var dp = D.evA.reduce(function (s, e) { return s + L.diasPerdidos(e.id); }, 0), acc = D.evA.filter(function (e) { var t = CAT.get("tipoEvento", e.tipo); return t && t.cuentaIF; }).length;
     return '<div class="kpis">' +
-      kpi("Eventos " + D.anio, D.evA.length, acc + " con días perdidos" + (D.evPrev.length ? " · " + D.evPrev.length + " en " + (D.anio - 1) : ""), "", "#/eventos", UI.spark(D.mes.map(function (m) { return m.length; }), "#2a78d6")) +
+      kpi("Eventos " + D.anio, D.evA.length, acc + " con días perdidos" + (D.evPrev.length ? " · " + D.evPrev.length + " en " + (D.anio - 1) : ""), "", "#/eventos", UI.spark(D.mes.map(function (m) { return m.length; }), "#1b65c2")) +
       kpi("Días perdidos", dp, "descansos médicos por accidente", dp ? "warn" : "ok", "#/descansos") +
       kpi("Investigaciones abiertas", D.abiertas.length, D.abiertas.filter(function (e) { return e.estado === "En revisión"; }).length + " en revisión", D.abiertas.length ? "purple" : "ok", "#/investigaciones") +
       kpi("Acciones vencidas", D.venc.length, D.accAb.length + " abiertas de " + D.accs.length, D.venc.length ? "bad" : "ok", "#/acciones") +
@@ -141,7 +141,7 @@ var TAB = {
   heat: function (D) { return '<div class="card"><h3>¿Cuándo ocurren? <small>día × franja horaria</small></h3>' + UI.heat(D.evA) + '</div>'; },
   flujo: function (D) {
     var b = D.base, c = function (f) { return b.filter(f).length; };
-    return '<div class="card"><h3>Flujo de investigaciones</h3>' + UI.embudo([["Reportado", c(function (e) { return e.estado === "Reportado"; }), "#2a78d6"], ["En investigación", c(function (e) { return e.estado === "En investigación" || e.estado === "Observado"; }), "#2a78d6"], ["En revisión", c(function (e) { return e.estado === "En revisión"; }), "#2a78d6"], ["Aprobado", c(function (e) { return e.estado === "Aprobado"; }), "#2a78d6"], ["Cerrado", c(function (e) { return e.estado === "Cerrado"; }), "#2a78d6"]]) + '</div>';
+    return '<div class="card"><h3>Flujo de investigaciones</h3>' + UI.embudo([["Reportado", c(function (e) { return e.estado === "Reportado"; }), "var(--on)"], ["En investigación", c(function (e) { return e.estado === "En investigación" || e.estado === "Observado"; }), "var(--ink2)"], ["En revisión", c(function (e) { return e.estado === "En revisión"; }), "var(--info)"], ["Aprobado", c(function (e) { return e.estado === "Aprobado"; }), "var(--soft)"], ["Cerrado", c(function (e) { return e.estado === "Cerrado"; }), "var(--ok)"]]) + '</div>';
   },
   atencion: function (D) { return '<div class="card"><h3>Lo que requiere atención <small>' + D.al.length + '</small></h3>' + alertasHTML(D.al.slice(0, 6)) + (D.al.length > 6 && !PRES.activo ? '<a href="#/alertas" class="small">Ver todas →</a>' : "") + '</div>'; },
   misAcc: function (D) {
@@ -153,7 +153,7 @@ var TAB = {
   /* Gráfico mensual: barras apiladas en UNA sola escala (sin segundo eje). */
   graficos: function (D) {
     if (!document.getElementById("chMes")) return;
-    var osc = TAB.osc(), sup = osc ? "#111b2a" : "#ffffff";
+    var osc = TAB.osc(), sup = osc ? "#1b1613" : "#ffffff";
     var ds = TAB.FAM.map(function (f) {
       return { label: f.t, data: D.mes.map(function (m) { return m.filter(function (e) { return f.tipos.indexOf(e.tipo) >= 0; }).length; }), backgroundColor: f.c[osc ? 1 : 0],
         borderColor: sup, borderWidth: { top: 2 }, borderRadius: 4, borderSkipped: "bottom", stack: "s", maxBarThickness: 34 };
@@ -161,17 +161,17 @@ var TAB = {
     chart("chMes", { type: "bar", data: { labels: MESES, datasets: ds },
       options: { interaction: { mode: "index", intersect: false },
         plugins: { legend: { position: "top", align: "start" }, tooltip: { filter: function (i) { return i.raw > 0; }, callbacks: { footer: function (it) { var t = it.reduce(function (s, x) { return s + x.raw; }, 0); return "Total: " + t + " evento(s)"; } } } },
-        scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, suggestedMax: Math.max.apply(null, D.mes.map(function (m) { return m.length; })) + 1, ticks: { precision: 0 }, grid: { color: osc ? "rgba(148,163,184,.12)" : "#eef2f7" }, border: { display: false } } } } });
+        scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, suggestedMax: Math.max.apply(null, D.mes.map(function (m) { return m.length; })) + 1, ticks: { precision: 0 }, grid: { color: osc ? "rgba(162,150,141,.12)" : "#efe9e1" }, border: { display: false } } } } });
   },
 
   grafHist: function (D) {
     if (!document.getElementById("chHist")) return;
     var osc = TAB.osc(), P = D.pat;
     chart("chHist", { type: "bar", data: { labels: MESES, datasets: [
-        { label: "Año " + D.anio, data: P.act, backgroundColor: osc ? "#3987e5" : "#2a78d6", borderRadius: 4, maxBarThickness: 22 },
-        { label: "Promedio " + (P.anios.length > 1 ? P.anios[0] + "–" + P.anios[P.anios.length - 1] : P.anios[0]), data: P.prom.map(function (v) { return Math.round(v * 10) / 10; }), backgroundColor: osc ? "#4f5f75" : "#b4bfcc", borderRadius: 4, maxBarThickness: 22 }] },
+        { label: "Año " + D.anio, data: P.act, backgroundColor: osc ? "#5b9bec" : "#1b65c2", borderRadius: 4, maxBarThickness: 22 },
+        { label: "Promedio " + (P.anios.length > 1 ? P.anios[0] + "–" + P.anios[P.anios.length - 1] : P.anios[0]), data: P.prom.map(function (v) { return Math.round(v * 10) / 10; }), backgroundColor: osc ? "#4a403b" : "#d9d1c7", borderRadius: 4, maxBarThickness: 22 }] },
       options: { interaction: { mode: "index", intersect: false }, plugins: { legend: { position: "top", align: "start" } },
-        scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: osc ? "rgba(148,163,184,.12)" : "#eef2f7" }, border: { display: false } } } } });
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: osc ? "rgba(162,150,141,.12)" : "#efe9e1" }, border: { display: false } } } } });
   },
 
   /* ---------- presentación en diapositivas ---------- */

@@ -168,7 +168,7 @@ var L = {
   },
   accVencida: function (a) { return a.estado !== "Cerrada" && a.fecha_compromiso && diasHasta(a.fecha_compromiso) < 0; },
   estadoPill: function (e) { var m = { "Reportado": "warn", "En investigación": "info", "Observado": "bad", "En revisión": "purple", "Aprobado": "ok", "Cerrado": "ok", "Anulado": "" }; return '<span class="pill ' + (m[e] || "") + '"><span class="dot"></span>' + esc(e) + '</span>'; },
-  tipoPill: function (c) { var t = CAT.get("tipoEvento", c) || {}; return '<span class="pill tp" style="--c:' + (t.color || "#64748b") + '">' + esc(t.t || c) + '</span>'; },
+  tipoPill: function (c) { var t = CAT.get("tipoEvento", c) || {}; return '<span class="pill tp" style="--c:' + (t.color || "#6b605a") + '">' + esc(t.t || c) + '</span>'; },
   accPill: function (a) { if (L.accVencida(a)) return '<span class="pill bad">Vencida</span>'; return '<span class="pill ' + ({ "Pendiente": "warn", "En proceso": "info", "Cerrada": "ok" }[a.estado] || "") + '">' + esc(a.estado) + '</span>'; },
   plazos: function (ev) {
     var base = new Date(ev.fecha + "T" + (ev.hora || "00:00") + ":00"), fl = ev.flujo || [];
@@ -485,11 +485,11 @@ var UI = {
     var x = 60 + 48 * Math.cos(ang), y = 60 - 48 * Math.sin(ang), ok = val <= meta;
     var mAng = Math.PI * (1 - meta / max), mx = 60 + 48 * Math.cos(mAng), my = 60 - 48 * Math.sin(mAng);
     return '<div class="gauge"><svg viewBox="0 0 120 70"><path d="M12 60 A48 48 0 0 1 108 60" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="10" stroke-linecap="round"/>' +
-      '<path class="g-arc" d="M12 60 A48 48 0 0 1 ' + x.toFixed(1) + ' ' + y.toFixed(1) + '" fill="none" stroke="' + (ok ? "#34d399" : "#fb7185") + '" stroke-width="10" stroke-linecap="round"/>' +
-      '<circle cx="' + mx.toFixed(1) + '" cy="' + my.toFixed(1) + '" r="3.2" fill="#fbbf24"/></svg><div class="g-v" data-count="' + val.toFixed(dec) + '" data-dec="' + dec + '">0</div><div class="g-l">' + label + '</div><div class="g-m">meta ≤ ' + fmt(meta, dec) + '</div></div>';
+      '<path class="g-arc" d="M12 60 A48 48 0 0 1 ' + x.toFixed(1) + ' ' + y.toFixed(1) + '" fill="none" stroke="' + (ok ? "#2fb173" : "#ef5a47") + '" stroke-width="10" stroke-linecap="round"/>' +
+      '<circle cx="' + mx.toFixed(1) + '" cy="' + my.toFixed(1) + '" r="3.2" fill="#f4823f"/></svg><div class="g-v" data-count="' + val.toFixed(dec) + '" data-dec="' + dec + '">0</div><div class="g-l">' + label + '</div><div class="g-m">meta ≤ ' + fmt(meta, dec) + '</div></div>';
   },
   piramide: function (niveles) {
-    var W = 360, H = 250, n = niveles.length, h = H / n, cols = ["#7f1d1d","#dc2626","#f59e0b","#7c3aed","#0ea5e9"];
+    var W = 360, H = 250, n = niveles.length, h = H / n, cols = ["#57230c","#c42b1a","#c98500","#b4490f","#1b65c2"];
     var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="pyr">';
     niveles.forEach(function (lv, i) {
       var t0 = (i / n), t1 = ((i + 1) / n), x0a = W / 2 - (W / 2) * t0 * 0.95 - 18 * (i ? 1 : 0.2), x0b = W / 2 + (W / 2) * t0 * 0.95 + 18 * (i ? 1 : 0.2);
@@ -502,7 +502,7 @@ var UI = {
   matriz: function (evs) {
     var G = ["MAY","SER","MEN"], P = ["RAR","MOD","ALT"], m = {};
     evs.forEach(function (e) { var s = e.scat || {}; if (s.gravedad && s.probabilidad) { var k = s.gravedad + s.probabilidad; (m[k] = m[k] || []).push(e.id); } });
-    var col = function (g, p) { var r = CAT.riesgo(g, p, "MOD"); return r.n === 3 ? "#ef4444" : r.n === 2 ? "#f59e0b" : "#22c55e"; };
+    var col = function (g, p) { var r = CAT.riesgo(g, p, "MOD"); return r.n === 3 ? "#d6311f" : r.n === 2 ? "#c98500" : "#2fb173"; };
     var h = '<div class="mx"><div class="mx-y">Gravedad potencial</div><div class="mx-g">';
     G.forEach(function (g) {
       h += '<div class="mx-lab">' + CAT.txt("gravedad", g).split(" ")[0] + '</div>';
@@ -542,9 +542,9 @@ function chart(id, cfg) {
   var el = document.getElementById(id); if (!el) return;
   if (!window.Chart) { CHARTJS.cargar().then(function () { if (document.body.contains(el)) chart(id, cfg); }, function () {}); return; }
   var osc = document.documentElement.getAttribute("data-theme") === "dark";
-  Chart.defaults.font.family = "Inter, system-ui, sans-serif"; Chart.defaults.color = osc ? "#a7b6c9" : "#64748b"; Chart.defaults.borderColor = osc ? "rgba(148,163,184,.16)" : "rgba(0,0,0,.08)";
+  Chart.defaults.font.family = "Barlow, system-ui, sans-serif"; Chart.defaults.color = osc ? "#a2968d" : "#6b605a"; Chart.defaults.borderColor = osc ? "rgba(162,150,141,.16)" : "rgba(0,0,0,.08)";
   cfg.options = Object.assign({ responsive: true, maintainAspectRatio: false, animation: { duration: 700 }, plugins: {} }, cfg.options || {});
-  cfg.options.plugins = Object.assign({ legend: { labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, font: { size: 11 } } }, tooltip: { backgroundColor: "#0b2540", padding: 10, cornerRadius: 8 } }, cfg.options.plugins);
+  cfg.options.plugins = Object.assign({ legend: { labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, font: { size: 11 } } }, tooltip: { backgroundColor: "#231c19", padding: 10, cornerRadius: 8 } }, cfg.options.plugins);
   charts.push(new Chart(el, cfg));
 }
 function kpi(l, v, s, c, href, spark, dec) {
@@ -618,7 +618,7 @@ function pintarEventos(soloInv) {
   if (!L2.length) { el.innerHTML = vacioHTML("eventos", S.eventos.length ? "No hay eventos con esos filtros" : "Aún no hay eventos registrados", S.eventos.length ? "Prueba con otro año, tipo o estado, o borra la búsqueda." : "Cuando ocurra un accidente o incidente, regístralo aquí.", L.rol() !== "COMITE" ? '<a class="btn primary mt" href="#/reportar">' + svg("reportar") + 'Reportar evento</a>' : ""); return; }
   el.innerHTML = '<div class="ev-cards">' + L2.map(function (e) {
     var pg = L.pasos(e), pl = L.plazos(e), mal = pl.filter(function (x) { return x.st === "vencido"; }).length, pr = pl.filter(function (x) { return x.st === "pronto"; }).length, rg = CAT.riesgo((e.scat || {}).gravedad, (e.scat || {}).probabilidad, (e.scat || {}).exposicion);
-    return '<a class="ev-card" href="#/evento/' + e.id + '" style="--c:' + ((CAT.get("tipoEvento", e.tipo) || {}).color || "#64748b") + '"><div class="evc-top"><b>' + esc(e.id) + '</b>' + L.tipoPill(e.tipo) + L.estadoPill(e.estado) + (rg ? '<span class="pill ' + rg.color + '">Riesgo ' + rg.nivel + '</span>' : "") + '<span class="spacer"></span>' +
+    return '<a class="ev-card" href="#/evento/' + e.id + '" style="--c:' + ((CAT.get("tipoEvento", e.tipo) || {}).color || "#6b605a") + '"><div class="evc-top"><b>' + esc(e.id) + '</b>' + L.tipoPill(e.tipo) + L.estadoPill(e.estado) + (rg ? '<span class="pill ' + rg.color + '">Riesgo ' + rg.nivel + '</span>' : "") + '<span class="spacer"></span>' +
       (e.estado === "Anulado" ? "" : mal ? '<span class="pill bad">⏰ ' + mal + ' plazo vencido</span>' : pr ? '<span class="pill warn">⏰ por vencer</span>' : '<span class="pill ok">al día</span>') + '</div>' +
       '<div class="evc-d">' + esc(e.descripcion) + '</div><div class="evc-m"><span>🗓 ' + fFecha(e.fecha) + ' ' + esc(e.hora || "") + '</span><span>👷 ' + esc(e.trabajador || "—") + '</span>' + areaChip(e.area) + '<span>🩺 ' + L.diasPerdidos(e.id) + ' d perdidos</span></div>' +
       GUIA.mini(e) + '</a>';
@@ -772,7 +772,7 @@ var DM = {
         function calc() {
           var a = $('[data-k="inicio"]', m).value, b = $('[data-k="fin"]', m).value, n = a && b ? Math.round((new Date(b) - new Date(a)) / 864e5) + 1 : 0;
           var ref = med ? HIST.refDias($('[data-k="organo"]', m) && $('[data-k="organo"]', m).value, $('[data-k="gravedad_clinica"]', m) && $('[data-k="gravedad_clinica"]', m).value, id) : "";
-          $("#dmDias", m).innerHTML = (ref ? ref + "<br>" : "") + (n > 0 ? "📅 <b>" + n + " día(s) de descanso</b>" + (n > 1 ? " — si es por accidente de trabajo, el evento califica como <b>incapacitante</b>." : " — retorno al día siguiente: califica como accidente <b>leve</b>.") : (a && b ? '<span style="color:#b91c1c">La fecha fin es anterior al inicio.</span>' : "Indica inicio y fin para calcular los días."));
+          $("#dmDias", m).innerHTML = (ref ? ref + "<br>" : "") + (n > 0 ? "📅 <b>" + n + " día(s) de descanso</b>" + (n > 1 ? " — si es por accidente de trabajo, el evento califica como <b>incapacitante</b>." : " — retorno al día siguiente: califica como accidente <b>leve</b>.") : (a && b ? '<span style="color:#a32416">La fecha fin es anterior al inicio.</span>' : "Indica inicio y fin para calcular los días."));
         }
         $('[data-k="inicio"]', m).addEventListener("change", calc); $('[data-k="fin"]', m).addEventListener("change", calc); calc();
         ["organo","gravedad_clinica"].forEach(function (k) { var el = $('[data-k="' + k + '"]', m); if (el) el.addEventListener("change", calc); });
@@ -883,11 +883,11 @@ Views.indicadores = function () {
     '<div class="row2"><div class="card"><h3>Tendencia IF · IS vs meta</h3><div class="chart-box"><canvas id="chIdx"></canvas></div></div><div class="card"><h3>Índice de accidentabilidad (IA)</h3><div class="chart-box"><canvas id="chIA"></canvas></div></div></div>';
   UI.contar($("#view"));
   chart("chIdx", { type: "line", data: { labels: MESES, datasets: [
-    { label: "IF", data: I.filas.map(function (f) { return +f.IF.toFixed(2); }), borderColor: "#dc2626", backgroundColor: "rgba(220,38,38,.12)", fill: true, tension: .35 },
-    { label: "Meta IF", data: MESES.map(function () { return CONFIG.META_IF; }), borderColor: "#dc2626", borderDash: [6, 5], pointRadius: 0, borderWidth: 1.5 },
-    { label: "IS", data: I.filas.map(function (f) { return +f.IS.toFixed(2); }), borderColor: "#0284c7", backgroundColor: "rgba(2,132,199,.10)", fill: true, tension: .35, yAxisID: "y1" }] },
+    { label: "IF", data: I.filas.map(function (f) { return +f.IF.toFixed(2); }), borderColor: "#c42b1a", backgroundColor: "rgba(196,43,26,.12)", fill: true, tension: .35 },
+    { label: "Meta IF", data: MESES.map(function () { return CONFIG.META_IF; }), borderColor: "#c42b1a", borderDash: [6, 5], pointRadius: 0, borderWidth: 1.5 },
+    { label: "IS", data: I.filas.map(function (f) { return +f.IS.toFixed(2); }), borderColor: "#ee6a1f", backgroundColor: "rgba(238,106,31,.10)", fill: true, tension: .35, yAxisID: "y1" }] },
     options: { scales: { y: { title: { display: true, text: "IF" } }, y1: { position: "right", grid: { display: false }, title: { display: true, text: "IS" } } } } });
-  chart("chIA", { type: "bar", data: { labels: MESES, datasets: [{ label: "IA", data: I.filas.map(function (f) { return +f.IA.toFixed(2); }), backgroundColor: "#7c3aed", borderRadius: 6 }] }, options: { plugins: { legend: { display: false } } } });
+  chart("chIA", { type: "bar", data: { labels: MESES, datasets: [{ label: "IA", data: I.filas.map(function (f) { return +f.IA.toFixed(2); }), backgroundColor: "#b4490f", borderRadius: 6 }] }, options: { plugins: { legend: { display: false } } } });
 };
 /* Cada fila guarda sus DOS valores juntos (trabajadores y HHT), en cola por mes para que dos guardados no se pisen,
    y la tabla se recalcula recién al salir de ella: así no se pierde lo que se está escribiendo en otra casilla. */
